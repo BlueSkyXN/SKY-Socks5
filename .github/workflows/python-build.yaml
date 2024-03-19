@@ -63,6 +63,16 @@ jobs:
         run: |
           python -m pip install nuitka aiohttp aiohttp-socks
 
+      - name: Install Dependency Walker (Windows only)
+        if: runner.os == 'Windows'
+        run: |
+          $url = "https://dependencywalker.com/depends22_x64.zip"
+          $output = "depends.zip"
+          $extractPath = "C:\Users\runneradmin\AppData\Local\Nuitka\Nuitka\Cache\downloads\depends\x86_64"
+          Invoke-WebRequest -Uri $url -OutFile $output
+          Expand-Archive -Path $output -DestinationPath $extractPath
+          Remove-Item -Path $output
+
       - name: Build executable with Nuitka
         run: |
           python -m nuitka --onefile --standalone Test_Sock5_List.py --output-dir=dist/${{ matrix.os }}_c
