@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 socks5_unique.txt
 socks5_working.txt
+Test_Sock5_List.exe

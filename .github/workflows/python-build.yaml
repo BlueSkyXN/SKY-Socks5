@@ -27,9 +27,9 @@ jobs:
           
       - name: Build executable
         run: |
-          pyinstaller --onefile --hidden-import aiohttp --hidden-import aiohttp-socks --strip Test_Sock5_List.py --distpath dist/${{ matrix.os }}
+            pyinstaller --onefile --hidden-import aiohttp --hidden-import aiohttp-socks --hidden-import _ssl --strip --debug all Test_Sock5_List.py --distpath dist/${{ matrix.os }}
         working-directory: ${{ github.workspace }}
-
+        
       - name: Upload-ubuntu-22.04
         if: ${{ matrix.os == 'ubuntu-22.04' }}
         uses: actions/upload-artifact@v3
