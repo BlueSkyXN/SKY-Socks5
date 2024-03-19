@@ -81,4 +81,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: build_Test_Sock5_List_c_${{ matrix.os }}_v${{ github.sha }}
-          path: dist/windows-2019_c/Test_Sock5_List_c.exe
+          path: dist/windows-2019_c/Test_Sock5_List.exe
