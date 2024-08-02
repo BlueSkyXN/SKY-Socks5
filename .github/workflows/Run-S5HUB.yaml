@@ -33,7 +33,7 @@ jobs:
 
     - name: Run proxy check script
       run: |
-        python proxy_check.py
+        python S5HUB.py
 
     - name: Compress and prepare artifacts
       run: |
