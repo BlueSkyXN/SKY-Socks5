@@ -15,6 +15,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Print working directory
+      run: pwd
+
+    - name: List files in the working directory
+      run: ls -la
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
@@ -27,40 +33,40 @@ jobs:
 
     - name: Run proxy check script
       run: |
-        python /home/runner/work/SKY-Socks5/SKY-Socks5/proxy_check.py
+        python proxy_check.py
 
     - name: Compress and prepare artifacts
       run: |
-        zip /home/runner/work/SKY-Socks5/SKY-Socks5/raw_proxies.zip /home/runner/work/SKY-Socks5/SKY-Socks5/raw_proxies.txt
-        zip /home/runner/work/SKY-Socks5/SKY-Socks5/validated_proxies.zip /home/runner/work/SKY-Socks5/SKY-Socks5/validated_proxies.txt
-        zip /home/runner/work/SKY-Socks5/SKY-Socks5/combined_proxies.zip /home/runner/work/SKY-Socks5/SKY-Socks5/raw_proxies.txt /home/runner/work/SKY-Socks5/SKY-Socks5/validated_proxies.txt
+        zip raw_proxies.zip raw_proxies.txt
+        zip validated_proxies.zip validated_proxies.txt
+        zip combined_proxies.zip raw_proxies.txt validated_proxies.txt
 
     - name: Upload raw_proxies.txt
       uses: actions/upload-artifact@v2
       with:
-        name: raw_proxies.txt
-        path: /home/runner/work/SKY-Socks5/SKY-Socks5/raw_proxies.txt
+        name: raw_proxies
+        path: raw_proxies.txt
 
     - name: Upload validated_proxies.txt
       uses: actions/upload-artifact@v2
       with:
-        name: validated_proxies.txt
-        path: /home/runner/work/SKY-Socks5/SKY-Socks5/validated_proxies.txt
+        name: validated_proxies
+        path: validated_proxies.txt
 
     - name: Upload raw_proxies.zip
       uses: actions/upload-artifact@v2
       with:
-        name: raw_proxies.zip
-        path: /home/runner/work/SKY-Socks5/SKY-Socks5/raw_proxies.zip
+        name: raw_proxies_zip
+        path: raw_proxies.zip
 
     - name: Upload validated_proxies.zip
       uses: actions/upload-artifact@v2
       with:
-        name: validated_proxies.zip
-        path: /home/runner/work/SKY-Socks5/SKY-Socks5/validated_proxies.zip
+        name: validated_proxies_zip
+        path: validated_proxies.zip
 
     - name: Upload combined_proxies.zip
       uses: actions/upload-artifact@v2
       with:
-        name: combined_proxies.zip
-        path: /home/runner/work/SKY-Socks5/SKY-Socks5/combined_proxies.zip
+        name: combined_proxies_zip
+        path: combined_proxies.zip
