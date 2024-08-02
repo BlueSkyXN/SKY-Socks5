@@ -3,9 +3,9 @@ import asyncio
 from aiohttp_socks import ProxyConnector, ProxyType
 
 # 并发量控制
-CONCURRENT_TASKS = 100  # 并发任务数量
+CONCURRENT_TASKS = 300  # 并发任务数量
 # 超时时间设置
-TIMEOUT_SECONDS = 15  # 超时时间，单位是秒
+TIMEOUT_SECONDS = 10  # 超时时间，单位是秒
 
 # 测试单个代理
 async def test_proxy(session, proxy, semaphore):
