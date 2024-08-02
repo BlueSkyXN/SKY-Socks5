@@ -17,10 +17,17 @@ if proxy:
 
 # 定义要获取代理的URL列表
 urls = [
-    "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all&simplified=true",
-    "https://www.proxy-list.download/api/v1/get?type=socks5",
-    "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt",
-    "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt"
+    'https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000&country=all&simplified=true',
+    'https://www.proxy-list.download/api/v1/get?type=socks5',
+    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt',
+    'https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt',
+    'https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt',
+    'https://raw.githubusercontent.com/ErcinDedeoglu/proxies/main/proxies/socks5.txt',
+    'https://yakumo.rei.my.id/SOCKS5',
+    'https://raw.githubusercontent.com/themiralay/Proxy-List-World/master/data.txt',
+    'https://raw.githubusercontent.com/officialputuid/KangProxy/KangProxy/socks5/socks5.txt',
+    'https://raw.githubusercontent.com/ALIILAPRO/Proxy/main/socks5.txt',
+    'https://raw.githubusercontent.com/0x1337fy/fresh-proxy-list/archive/storage/classic/socks5.txt'
 ]
 
 # 使用集合来存储去重后的代理
