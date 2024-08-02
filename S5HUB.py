@@ -50,13 +50,13 @@ def check_proxy(proxy):
             "http": f"socks5://{proxy}",
             "https": f"socks5://{proxy}"
         }
-        response = requests.get("https://one.one.one.one", proxies=socks5_proxy, timeout=10)
+        response = requests.get("https://one.one.one.one", proxies=socks5_proxy, timeout=15)
         if response.status_code == 200:
             return proxy
     except Exception:
         return None
 
-# 使用 200 线程并发验证代理可用性
+# 使用 20 线程并发验证代理可用性
 def validate_proxies():
     with open("raw_proxies.txt", "r") as f:
         proxies = f.read().splitlines()
@@ -73,7 +73,7 @@ def validate_proxies():
         sys.stdout.flush()
 
     start_time = time.time()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=200) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         results = executor.map(check_proxy, proxies)
         for i, result in enumerate(results):
             progress_bar(i + 1, total_proxies)
