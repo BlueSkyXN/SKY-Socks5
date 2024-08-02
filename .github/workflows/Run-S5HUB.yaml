@@ -1,11 +1,16 @@
 name: S5 HUB
 
 # 触发工作流程的事件，这里设置为手动触发和推送到main分支
-on: 
-  workflow_dispatch:
+on:
   push:
-    branches:
-      - main
+    paths:
+      - 'S5HUB.py'
+      - '.github/workflows/Run-S5HUB.yaml'
+  pull_request:
+    paths:
+      - 'S5HUB.py'
+      - '.github/workflows/Run-S5HUB.yaml'
+  workflow_dispatch:
 
 jobs:
   run-script:

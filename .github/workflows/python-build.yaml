@@ -2,7 +2,13 @@ name: Python Building
 
 on:
   push:
-    branches: [main]
+    paths:
+      - 'Test_Sock5_List.py'
+      - '.github/workflows/python-build.yaml'
+  pull_request:
+    paths:
+      - 'Test_Sock5_List.py'
+      - '.github/workflows/python-build.yaml'
   workflow_dispatch:
 
 jobs:
