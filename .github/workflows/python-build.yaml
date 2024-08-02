@@ -5,10 +5,12 @@ on:
     paths:
       - 'Test_Sock5_List.py'
       - '.github/workflows/python-build.yaml'
+      - 'Get_Socks5_List.py'
   pull_request:
     paths:
       - 'Test_Sock5_List.py'
       - '.github/workflows/python-build.yaml'
+      - 'Get_Socks5_List.py'
   workflow_dispatch:
 
 jobs:
@@ -98,3 +100,39 @@ jobs:
         with:
           name: build_Test_Sock5_List_c_${{ matrix.os }}_v${{ github.sha }}
           path: dist/windows-2019_c/Test_Sock5_List.exe
+
+  run-get_socks5_list:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+          architecture: 'x64'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install requests
+
+      - name: Run Get_Socks5_List.py
+        run: |
+          python Get_Socks5_List.py
+
+      - name: Compress socks5_unique.txt
+        run: |
+          zip socks5_unique.zip socks5_unique.txt
+
+      - name: Upload socks5_unique.txt
+        uses: actions/upload-artifact@v3
+        with:
+          name: socks5_unique_txt
+          path: socks5_unique.txt
+
+      - name: Upload socks5_unique.zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: socks5_unique_zip
+          path: socks5_unique.zip

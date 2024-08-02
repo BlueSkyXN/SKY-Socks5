@@ -50,7 +50,7 @@ def check_proxy(proxy):
             "http": f"socks5://{proxy}",
             "https": f"socks5://{proxy}"
         }
-        response = requests.get("https://one.one.one.one", proxies=socks5_proxy, timeout=5)
+        response = requests.get("https://one.one.one.one", proxies=socks5_proxy, timeout=15)
         if response.status_code == 200:
             return proxy
     except Exception:

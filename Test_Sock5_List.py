@@ -3,9 +3,9 @@ import asyncio
 from aiohttp_socks import ProxyConnector, ProxyType
 
 # 并发量控制
-CONCURRENT_TASKS = 500  # 并发任务数量
+CONCURRENT_TASKS = 100  # 并发任务数量
 # 超时时间设置
-TIMEOUT_SECONDS = 10  # 超时时间，单位是秒
+TIMEOUT_SECONDS = 15  # 超时时间，单位是秒
 
 # 测试单个代理
 async def test_proxy(session, proxy, semaphore):
@@ -16,7 +16,7 @@ async def test_proxy(session, proxy, semaphore):
             # 设置代理
             proxy_url = f"socks5://{proxy_host}:{proxy_port}"
             # 发送测试请求
-            async with session.get("http://www.google.com", proxy=proxy_url, timeout=aiohttp.ClientTimeout(total=TIMEOUT_SECONDS)) as response:
+            async with session.get("https://www.cloudflare.com/cdn-cgi/trace", proxy=proxy_url, timeout=aiohttp.ClientTimeout(total=TIMEOUT_SECONDS)) as response:
                 # 判断响应状态码是否在期望列表中
                 if response.status in [200, 403, 502, 503, 101, 429, 204, 301, 302, 304, 504, 500]:
                     return proxy  # 返回工作代理的地址
