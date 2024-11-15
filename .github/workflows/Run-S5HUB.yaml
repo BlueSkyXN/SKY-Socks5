@@ -48,31 +48,31 @@ jobs:
         zip combined_proxies.zip raw_proxies.txt validated_proxies.txt
 
     - name: Upload raw_proxies.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: raw_proxies
         path: raw_proxies.txt
 
     - name: Upload validated_proxies.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: validated_proxies
         path: validated_proxies.txt
 
     - name: Upload raw_proxies.zip
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: raw_proxies_zip
         path: raw_proxies.zip
 
     - name: Upload validated_proxies.zip
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: validated_proxies_zip
         path: validated_proxies.zip
 
     - name: Upload combined_proxies.zip
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: combined_proxies_zip
         path: combined_proxies.zip
