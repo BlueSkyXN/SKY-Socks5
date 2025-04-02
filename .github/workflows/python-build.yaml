@@ -18,13 +18,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2019]
+        os: [ubuntu-22.04, windows-2022]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           architecture: 'x64'
@@ -40,29 +40,29 @@ jobs:
 
       - name: Upload-ubuntu-22.04
         if: ${{ matrix.os == 'ubuntu-22.04' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build_Test_Sock5_List_${{ matrix.os }}_v${{ env.COMMIT_MESSAGE }}
           path: dist/ubuntu-22.04/Test_Sock5_List
 
-      - name: Upload-windows-2019
-        if: ${{ matrix.os == 'windows-2019' }}
-        uses: actions/upload-artifact@v3
+      - name: Upload-windows-2022
+        if: ${{ matrix.os == 'windows-2022' }}
+        uses: actions/upload-artifact@v4
         with:
           name: build_Test_Sock5_List_${{ matrix.os }}_v${{ env.COMMIT_MESSAGE }}
-          path: dist/windows-2019/Test_Sock5_List.exe
+          path: dist/windows-2022/Test_Sock5_List.exe
 
   build-socks5_proxy_tester_c:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2019]
+        os: [ubuntu-22.04, windows-2022]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           architecture: 'x64'
@@ -89,26 +89,26 @@ jobs:
 
       - name: Upload-ubuntu-22.04
         if: ${{ matrix.os == 'ubuntu-22.04' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build_Test_Sock5_List_c_${{ matrix.os }}_v${{ github.sha }}
           path: dist/ubuntu-22.04_c/Test_Sock5_List*
 
-      - name: Upload-windows-2019
-        if: ${{ matrix.os == 'windows-2019' }}
-        uses: actions/upload-artifact@v3
+      - name: Upload-windows-2022
+        if: ${{ matrix.os == 'windows-2022' }}
+        uses: actions/upload-artifact@v4
         with:
           name: build_Test_Sock5_List_c_${{ matrix.os }}_v${{ github.sha }}
-          path: dist/windows-2019_c/Test_Sock5_List.exe
+          path: dist/windows-2022_c/Test_Sock5_List.exe
 
   run-get_socks5_list:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           architecture: 'x64'
@@ -126,13 +126,13 @@ jobs:
           zip socks5_unique.zip socks5_unique.txt
 
       - name: Upload socks5_unique.txt
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: socks5_unique_txt
           path: socks5_unique.txt
 
       - name: Upload socks5_unique.zip
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: socks5_unique_zip
           path: socks5_unique.zip
