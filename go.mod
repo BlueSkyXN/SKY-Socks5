@@ -1,3 +1,3 @@
-module github.com/rebecca554owen/sky-socks5
+module github.com/BlueSkyXN/SKY-Socks5
 
 go 1.22.0

@@ -1,104 +1,103 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: '输入发布的 tag 名称'
+        description: Release tag to build and publish
         required: true
-        default: 'v0.1.0'
-  push:
-    tags:
-      - 'v*'
+        default: v0.1.0
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-22.04]
-        platform: 
-          - linux/amd64
-          - linux/aarch64
-        include:
-          - platform: linux/amd64
-            platform_name: linux-amd64
-            go_arch: amd64
-          - platform: linux/aarch64
-            platform_name: linux-arm64
-            go_arch: arm64
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-    runs-on: ${{ matrix.os }}
-    env:
-      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-      
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.22.0'
-        cache: true
-    
-    - name: Go Tidy
-      run: go mod tidy
-      
-    - name: Get release tag
-      id: get-tag
-      shell: bash
-      run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-        else
-          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        fi
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Validate inputs
-      run: |
-        # 验证tag格式
-        if [[ ! "${{ steps.get-tag.outputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "错误：标签格式无效，应为vx.x.x"
-          exit 1
-        fi
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
 
-        # 验证平台参数
-        PLATFORM=${{ matrix.platform_name }}
-        if [[ -z "${PLATFORM}" ]]; then
-          echo "错误：平台参数为空"
-          exit 1
-        fi
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ github.event.inputs.tag }}"
+          else
+            tag="${GITHUB_REF#refs/tags/}"
+          fi
 
-        # 压缩包名称
-        ARTIFACT_NAME=socks-${PLATFORM}.zip
-        echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
+          if [ -z "${tag}" ] || [[ "${tag}" != v* ]]; then
+            echo "Release tag must start with v" >&2
+            exit 1
+          fi
 
-    - name: Build
-      env:
-        GOOS: linux
-        GOARCH: ${{ matrix.go_arch }}
-        CGO_ENABLED: 0
-      run: |
-        go mod tidy
-        go build -ldflags="-X main.Version=${{ steps.get-tag.outputs.tag }}" -o socks main.go
-        zip ${{ env.ARTIFACT_NAME }} socks
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
 
-    - name: Record build time
-      run: |
-        echo "BUILD_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV        
+      - name: Run tests
+        run: go test ./...
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.ARTIFACT_NAME }}
-        path: ${{ env.ARTIFACT_NAME }}
+      - name: Build release archives
+        shell: bash
+        run: |
+          set -euo pipefail
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      if: success()
-      with:
-        files: ${{ env.ARTIFACT_NAME }}
-        tag_name: ${{ steps.get-tag.outputs.tag }}
-        body: "Release at: ${{ env.BUILD_TIME }}"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          release_tag="${{ steps.release.outputs.tag }}"
+          rm -rf dist
+          mkdir -p dist
+
+          targets=(
+            "linux amd64"
+            "linux arm64"
+            "darwin amd64"
+            "darwin arm64"
+            "windows amd64"
+          )
+
+          for target in "${targets[@]}"; do
+            read -r goos goarch <<<"${target}"
+            archive="sky-socks5_${release_tag}_${goos}_${goarch}"
+
+            if [ "${goos}" = "windows" ]; then
+              GOOS="${goos}" GOARCH="${goarch}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/sky-socks5.exe ./cmd/sky-socks5
+              (
+                cd dist
+                zip -q "${archive}.zip" sky-socks5.exe
+              )
+              rm -f dist/sky-socks5.exe
+              continue
+            fi
+
+            GOOS="${goos}" GOARCH="${goarch}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/sky-socks5 ./cmd/sky-socks5
+            tar -C dist -czf "dist/${archive}.tar.gz" sky-socks5
+            rm -f dist/sky-socks5
+          done
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ steps.release.outputs.tag }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: dist/*
