@@ -110,7 +110,7 @@ go run ./cmd/sky-socks5 -h
 ## GitHub automation
 
 - **Go CI** runs `go test ./...`.
-- **Publish Proxy Artifacts** runs the Go CLI on a schedule or by manual dispatch and uploads the generated outputs.
+- **Publish Proxy Artifacts** runs the Go CLI by manual dispatch and uploads the generated outputs.
 - **Release** builds archives from `./cmd/sky-socks5` for tagged releases.
 
 ## Deprecated Python scripts

@@ -162,8 +162,8 @@ cython_debug/
 
 # Go build outputs
 bin/
-sky-socks5
-sky-socks5.exe
+/sky-socks5
+/sky-socks5.exe
 
 # Generated proxy artifacts
 generated/

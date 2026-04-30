@@ -2,8 +2,6 @@ name: Publish Proxy Artifacts
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 2 * * *"
 
 permissions:
   contents: read
