@@ -1,12 +1,16 @@
-name: Publish Proxy Artifacts
+name: Proxy Results
 
 on:
   workflow_dispatch:
     inputs:
       source_url:
-        description: Optional single source URL for a smoke run
+        description: Optional single source URL for testing one upstream; leave empty to use configs/sources.txt
         required: false
         default: ""
+      fetch_timeout:
+        description: Timeout for fetching each source list
+        required: true
+        default: 15s
       validate_timeout:
         description: Per-proxy validation timeout
         required: true
@@ -20,11 +24,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish-proxies
+  group: proxy-results
   cancel-in-progress: true
 
 jobs:
-  publish:
+  generate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -38,39 +42,58 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Generate proxy artifacts
+      - name: Generate proxy results
         id: generate
         shell: bash
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+          FETCH_TIMEOUT: ${{ inputs.fetch_timeout }}
+          VALIDATE_TIMEOUT: ${{ inputs.validate_timeout }}
+          VALIDATE_CONCURRENCY: ${{ inputs.validate_concurrency }}
         run: |
           set -euo pipefail
 
           rm -rf generated
           args=(
             -output-dir generated
-            -validate-timeout "${{ github.event.inputs.validate_timeout }}"
-            -validate-concurrency "${{ github.event.inputs.validate_concurrency }}"
+            -fetch-timeout "${FETCH_TIMEOUT}"
+            -validate-timeout "${VALIDATE_TIMEOUT}"
+            -validate-concurrency "${VALIDATE_CONCURRENCY}"
           )
 
-          if [ -n "${{ github.event.inputs.source_url }}" ]; then
-            printf '%s\n' "${{ github.event.inputs.source_url }}" > /tmp/sky-socks5-sources.txt
+          if [ -n "${SOURCE_URL}" ]; then
+            printf '%s\n' "${SOURCE_URL}" > /tmp/sky-socks5-sources.txt
             args+=(-source-file /tmp/sky-socks5-sources.txt)
           fi
 
           go run . "${args[@]}"
 
-      - name: Summarize generated artifacts
+      - name: Summarize proxy results
         if: always()
         shell: bash
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+          FETCH_TIMEOUT: ${{ inputs.fetch_timeout }}
+          VALIDATE_TIMEOUT: ${{ inputs.validate_timeout }}
+          VALIDATE_CONCURRENCY: ${{ inputs.validate_concurrency }}
         run: |
           {
-            echo "## Proxy Artifacts"
+            echo "## Proxy Results"
             echo
             echo "- Branch: \`${GITHUB_REF_NAME}\`"
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Output directory: \`generated/\`"
-            echo "- Source override: \`${{ github.event.inputs.source_url || 'configs/sources.txt' }}\`"
-            echo "- Validate timeout: \`${{ github.event.inputs.validate_timeout }}\`"
-            echo "- Validate concurrency: \`${{ github.event.inputs.validate_concurrency }}\`"
+            if [ -n "${SOURCE_URL}" ]; then
+              echo "- Source mode: \`single-source smoke run\`"
+              echo "- Source URL: \`${SOURCE_URL}\`"
+              echo "- Default source file: \`configs/sources.txt\` (not used for this smoke run)"
+            else
+              echo "- Source mode: \`configured aggregate list\`"
+              echo "- Source file: \`configs/sources.txt\`"
+            fi
+            echo "- Fetch timeout: \`${FETCH_TIMEOUT}\`"
+            echo "- Validate timeout: \`${VALIDATE_TIMEOUT}\`"
+            echo "- Validate concurrency: \`${VALIDATE_CONCURRENCY}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
           if [ -f generated/proxy_report.json ]; then
@@ -104,9 +127,10 @@ jobs:
             } >> "${GITHUB_STEP_SUMMARY}"
           fi
 
-      - name: Upload generated artifacts
+      - name: Upload proxy results
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: proxy-artifacts
+          name: proxy-results-${{ github.run_id }}
           path: generated/
           if-no-files-found: error
+          retention-days: 14

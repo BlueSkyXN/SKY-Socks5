@@ -1,4 +1,4 @@
-name: Go CI
+name: Program Tests
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
           fi
 
           {
-            echo "## Go CI"
+            echo "## Program Tests"
             echo
             echo "- Result: ${result}"
             echo "- Branch: \`${GITHUB_REF_NAME}\`"
