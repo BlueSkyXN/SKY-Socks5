@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlueSkyXN/SKY-Socks5/internal/config"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/fetch"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/report"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/validate"
+	"github.com/BlueSkyXN/SKY-Socks5/app/config"
+	"github.com/BlueSkyXN/SKY-Socks5/app/fetch"
+	"github.com/BlueSkyXN/SKY-Socks5/app/report"
+	"github.com/BlueSkyXN/SKY-Socks5/app/validate"
 )
 
 func TestRunWritesExpectedArtifacts(t *testing.T) {
@@ -19,7 +19,7 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 	statuses, _ := config.ParseStatuses("200")
 	cfg := config.Default()
 	cfg.OutputDir = tmp
-	cfg.SourceFile = "urls.txt"
+	cfg.SourceFile = "sources.txt"
 	cfg.RawOutputPath = filepath.Join(tmp, "raw.txt")
 	cfg.UniqueOutputPath = filepath.Join(tmp, "unique.txt")
 	cfg.ValidatedOutputPath = filepath.Join(tmp, "validated.txt")

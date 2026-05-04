@@ -6,7 +6,7 @@ Public proxies are noisy and untrusted. Use this project for research, testing, 
 
 ## What it does
 
-1. Loads source URLs from `urls.txt` or a custom source file.
+1. Loads source URLs from `configs/sources.txt` or a custom source file.
 2. Downloads each upstream proxy list.
 3. Parses and normalizes SOCKS5 proxy addresses.
 4. Writes parsed and deduplicated proxy files.
@@ -28,21 +28,31 @@ go test ./...
 Show CLI help:
 
 ```bash
-go run ./cmd/sky-socks5 -h
+go run . -h
 ```
 
 Generate artifacts with the default source file:
 
 ```bash
-go run ./cmd/sky-socks5 -output-dir generated
+go run . -output-dir generated
 ```
 
 Build a local binary:
 
 ```bash
-go build -o bin/sky-socks5 ./cmd/sky-socks5
+go build -o bin/sky-socks5 .
 ./bin/sky-socks5 -output-dir generated
 ```
+
+## Project layout
+
+| Path | Purpose |
+| --- | --- |
+| `main.go` | CLI entrypoint. |
+| `app/` | Application packages for config, source loading, fetching, parsing, validation, output, reporting, and pipeline orchestration. |
+| `configs/sources.txt` | Default newline-delimited SOCKS5 source list. |
+| `docs/` | Architecture and source-management notes. |
+| `.github/workflows/` | CI, manual artifact publishing, and release workflows. |
 
 ## Output files
 
@@ -55,7 +65,7 @@ go build -o bin/sky-socks5 ./cmd/sky-socks5
 
 ## Common flags
 
-- `-source-file` - newline-delimited source URL file. Defaults to `urls.txt`.
+- `-source-file` - newline-delimited source URL file. Defaults to `configs/sources.txt`.
 - `-output-dir` - directory for generated artifacts.
 - `-fetch-proxy` / `-proxy` - optional proxy used when fetching source lists.
 - `-probe-url` - HTTP or HTTPS URL used to validate candidate proxies.
@@ -68,8 +78,8 @@ go build -o bin/sky-socks5 ./cmd/sky-socks5
 Example:
 
 ```bash
-go run ./cmd/sky-socks5 \
-  -source-file urls.txt \
+go run . \
+  -source-file configs/sources.txt \
   -output-dir generated \
   -fetch-proxy socks5://127.0.0.1:1080 \
   -probe-url https://one.one.one.one \
@@ -81,8 +91,8 @@ go run ./cmd/sky-socks5 \
 
 - **Go CI** runs `go test ./...`.
 - **Publish Proxy Artifacts** is manual-only and uploads the generated files from `generated/`.
-- **Release** builds cross-platform archives from `./cmd/sky-socks5` for tags or manual dispatch.
+- **Release** builds cross-platform archives from the root CLI for tags or manual dispatch.
 
 ## Governance
 
-The repository is intended to use pull requests, required checks, and CODEOWNERS review for changes to `main`. The primary CLI entrypoint is `./cmd/sky-socks5`; root-level runtime entrypoints and generated artifacts should not be committed.
+The repository is intended to use pull requests, required checks, and CODEOWNERS review for changes to `main`. The primary CLI entrypoint is `main.go`; generated artifacts should not be committed.

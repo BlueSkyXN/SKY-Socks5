@@ -2,6 +2,19 @@ name: Publish Proxy Artifacts
 
 on:
   workflow_dispatch:
+    inputs:
+      source_url:
+        description: Optional single source URL for a smoke run
+        required: false
+        default: ""
+      validate_timeout:
+        description: Per-proxy validation timeout
+        required: true
+        default: 10s
+      validate_concurrency:
+        description: Maximum validation workers
+        required: true
+        default: "100"
 
 permissions:
   contents: read
@@ -17,21 +30,82 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6.4.0
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
       - name: Generate proxy artifacts
+        id: generate
+        shell: bash
         run: |
+          set -euo pipefail
+
           rm -rf generated
-          go run ./cmd/sky-socks5 -output-dir generated
+          args=(
+            -output-dir generated
+            -validate-timeout "${{ github.event.inputs.validate_timeout }}"
+            -validate-concurrency "${{ github.event.inputs.validate_concurrency }}"
+          )
+
+          if [ -n "${{ github.event.inputs.source_url }}" ]; then
+            printf '%s\n' "${{ github.event.inputs.source_url }}" > /tmp/sky-socks5-sources.txt
+            args+=(-source-file /tmp/sky-socks5-sources.txt)
+          fi
+
+          go run . "${args[@]}"
+
+      - name: Summarize generated artifacts
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Proxy Artifacts"
+            echo
+            echo "- Branch: \`${GITHUB_REF_NAME}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Output directory: \`generated/\`"
+            echo "- Source override: \`${{ github.event.inputs.source_url || 'configs/sources.txt' }}\`"
+            echo "- Validate timeout: \`${{ github.event.inputs.validate_timeout }}\`"
+            echo "- Validate concurrency: \`${{ github.event.inputs.validate_concurrency }}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ -f generated/proxy_report.json ]; then
+          python3 - <<'PY' >> "${GITHUB_STEP_SUMMARY}"
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("generated/proxy_report.json").read_text())
+          totals = report["totals"]
+          print(f"- Sources: {totals['source_urls']}")
+          print(f"- Fetch errors: {totals['fetch_errors']}")
+          print(f"- Raw candidates: {totals['raw_candidates']}")
+          print(f"- Parsed proxies: {totals['parsed_proxies']}")
+          print(f"- Unique proxies: {totals['unique_proxies']}")
+          print(f"- Valid proxies: {totals['valid_proxies']}")
+          print(f"- Invalid proxies: {totals['invalid_proxies']}")
+          print()
+          print("| File | Lines |")
+          print("| --- | ---: |")
+          for name in ["raw_proxies.txt", "unique_proxies.txt", "validated_proxies.txt"]:
+              path = Path("generated") / name
+              if path.exists():
+                  count = len(path.read_text().splitlines())
+                  print(f"| `{name}` | {count} |")
+          print("| `proxy_report.json` | 1 |")
+          PY
+          else
+            {
+              echo
+              echo "Generation did not produce \`generated/proxy_report.json\`."
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
       - name: Upload generated artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: proxy-artifacts
           path: generated/

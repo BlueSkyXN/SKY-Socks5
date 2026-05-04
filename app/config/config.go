@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DefaultSourceFile          = "urls.txt"
+	DefaultSourceFile          = "configs/sources.txt"
 	DefaultOutputDir           = "."
 	DefaultRawOutputFile       = "raw_proxies.txt"
 	DefaultUniqueOutputFile    = "unique_proxies.txt"

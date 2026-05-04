@@ -7,9 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to build and publish
+        description: Release tag to build
         required: true
         default: v0.1.0
+      publish:
+        description: Publish GitHub release after building
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -21,15 +26,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6.4.0
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
       - name: Resolve release tag
         id: release
@@ -49,7 +54,36 @@ jobs:
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
 
       - name: Run tests
-        run: go test ./...
+        shell: bash
+        run: |
+          set +e
+          go test ./... 2>&1 | tee /tmp/release-go-test.log
+          status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "${status}" -eq 0 ]; then
+            result="success"
+          else
+            result="failure"
+          fi
+
+          {
+            echo "## Release Tests"
+            echo
+            echo "- Result: ${result}"
+            echo "- Release tag: \`${{ steps.release.outputs.tag }}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Command: \`go test ./...\`"
+            echo
+            echo "<details><summary>go test output</summary>"
+            echo
+            echo '```text'
+            cat /tmp/release-go-test.log
+            echo '```'
+            echo "</details>"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          exit "${status}"
 
       - name: Build release archives
         shell: bash
@@ -73,7 +107,7 @@ jobs:
             archive="sky-socks5_${release_tag}_${goos}_${goarch}"
 
             if [ "${goos}" = "windows" ]; then
-              GOOS="${goos}" GOARCH="${goarch}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/sky-socks5.exe ./cmd/sky-socks5
+              GOOS="${goos}" GOARCH="${goarch}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/sky-socks5.exe .
               (
                 cd dist
                 zip -q "${archive}.zip" sky-socks5.exe
@@ -82,20 +116,40 @@ jobs:
               continue
             fi
 
-            GOOS="${goos}" GOARCH="${goarch}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/sky-socks5 ./cmd/sky-socks5
+            GOOS="${goos}" GOARCH="${goarch}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o dist/sky-socks5 .
             tar -C dist -czf "dist/${archive}.tar.gz" sky-socks5
             rm -f dist/sky-socks5
           done
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: release-assets-${{ steps.release.outputs.tag }}
           path: dist/*
           if-no-files-found: error
 
+      - name: Summarize release assets
+        shell: bash
+        run: |
+          {
+            echo "## Release Assets"
+            echo
+            echo "- Release tag: \`${{ steps.release.outputs.tag }}\`"
+            echo "- Branch: \`${GITHUB_REF_NAME}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Publish release: \`${{ github.event_name == 'push' || github.event.inputs.publish == 'true' }}\`"
+            echo
+            echo "| Asset | Size |"
+            echo "| --- | ---: |"
+            while IFS= read -r asset; do
+              size=$(du -h "${asset}" | awk '{print $1}')
+              echo "| \`${asset#dist/}\` | ${size} |"
+            done < <(find dist -type f | sort)
+          } >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        if: ${{ github.event_name == 'push' || github.event.inputs.publish == 'true' }}
+        uses: softprops/action-gh-release@v3.0.0
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ github.sha }}

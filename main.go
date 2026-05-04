@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/BlueSkyXN/SKY-Socks5/internal/pipeline"
+	"github.com/BlueSkyXN/SKY-Socks5/app/pipeline"
 )
 
 func main() {

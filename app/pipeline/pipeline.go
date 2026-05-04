@@ -8,13 +8,13 @@ import (
 	"io"
 	"time"
 
-	"github.com/BlueSkyXN/SKY-Socks5/internal/config"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/fetch"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/output"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/proxy"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/report"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/source"
-	"github.com/BlueSkyXN/SKY-Socks5/internal/validate"
+	"github.com/BlueSkyXN/SKY-Socks5/app/config"
+	"github.com/BlueSkyXN/SKY-Socks5/app/fetch"
+	"github.com/BlueSkyXN/SKY-Socks5/app/output"
+	"github.com/BlueSkyXN/SKY-Socks5/app/proxy"
+	"github.com/BlueSkyXN/SKY-Socks5/app/report"
+	"github.com/BlueSkyXN/SKY-Socks5/app/source"
+	"github.com/BlueSkyXN/SKY-Socks5/app/validate"
 )
 
 type Dependencies struct {

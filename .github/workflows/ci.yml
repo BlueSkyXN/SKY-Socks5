@@ -14,13 +14,43 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6.4.0
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
 
       - name: Run tests
-        run: go test ./...
+        shell: bash
+        run: |
+          set +e
+          go test ./... 2>&1 | tee /tmp/go-test.log
+          status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "${status}" -eq 0 ]; then
+            result="success"
+          else
+            result="failure"
+          fi
+
+          {
+            echo "## Go CI"
+            echo
+            echo "- Result: ${result}"
+            echo "- Branch: \`${GITHUB_REF_NAME}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Go: \`$(go version)\`"
+            echo "- Command: \`go test ./...\`"
+            echo
+            echo "<details><summary>go test output</summary>"
+            echo
+            echo '```text'
+            cat /tmp/go-test.log
+            echo '```'
+            echo "</details>"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          exit "${status}"

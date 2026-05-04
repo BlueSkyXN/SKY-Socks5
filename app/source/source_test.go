@@ -8,7 +8,7 @@ import (
 )
 
 func TestLoadFileSkipsBlankAndCommentLines(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "urls.txt")
+	path := filepath.Join(t.TempDir(), "sources.txt")
 	if err := os.WriteFile(path, []byte("\n# comment\nhttps://one.example/list.txt\n https://two.example/list.txt \n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
