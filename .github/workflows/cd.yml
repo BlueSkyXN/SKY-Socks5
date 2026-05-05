@@ -112,17 +112,39 @@ jobs:
             echo "- 验证超时 / Validate timeout: \`${VALIDATE_TIMEOUT}\`"
             echo "- 验证并发 / Validate concurrency: \`${VALIDATE_CONCURRENCY}\`"
             echo "- 有效性口径 / Validation policy: SOCKS5 proxy must complete an HTTP GET to the probe URL and return an accepted status."
-            echo "- 主 CSV 字段 / Main CSV fields: entry endpoint, source count, duplicate count, exit IP/country, Cloudflare colo/http/tls/sni/kex, status, timing, validation settings."
-            echo "- 完整 Trace / Full trace: raw Cloudflare key/value data is preserved in \`proxy_report.json\`."
+            echo "- 主 CSV 字段 / Main CSV fields: entry/source metadata, exit IP/country, Cloudflare colo/http/flags, status, timing, validation settings."
+            echo "- Cloudflare flags: only non-default \`warp\`, \`gateway\`, or \`rbi\` values are surfaced in the CSV."
+            echo "- 完整 Trace / Full trace: raw Cloudflare key/value data, including diagnostic fields such as \`tls\`, \`sni\`, and \`kex\`, is preserved in \`proxy_report.json\`."
           } >> "${GITHUB_STEP_SUMMARY}"
 
           if [ -f generated/proxy_report.json ]; then
           python3 - <<'PY' >> "${GITHUB_STEP_SUMMARY}"
           import json
+          from collections import Counter
           from pathlib import Path
 
           report = json.loads(Path("generated/proxy_report.json").read_text())
           totals = report["totals"]
+
+          def md(value):
+              return str(value).replace("|", "\\|").replace("\n", " ")
+
+          def percent(part, whole):
+              if not whole:
+                  return "0.00%"
+              return f"{part / whole * 100:.2f}%"
+
+          def top_items(counter, limit=8):
+              if not counter:
+                  return "none"
+              return ", ".join(f"{key}:{value}" for key, value in counter.most_common(limit))
+
+          def percentile(values, ratio):
+              if not values:
+                  return ""
+              index = int(round((len(values) - 1) * ratio))
+              return values[index]
+
           print()
           print("| 指标 / Metric | 数值 / Value |")
           print("| --- | ---: |")
@@ -138,6 +160,7 @@ jobs:
           ]
           for label, value in rows:
               print(f"| {label} | {value} |")
+
           print()
           print("| 文件 / File | 行数 / Lines |")
           print("| --- | ---: |")
@@ -147,6 +170,40 @@ jobs:
                   count = len(path.read_text().splitlines())
                   print(f"| `{name}` | {count} |")
           print("| `proxy_report.json` | 1 |")
+
+          records = report.get("validated_proxies") or []
+          exit_countries = Counter()
+          colos = Counter()
+          match_counts = Counter()
+          same_ip_counts = Counter()
+          flag_counts = Counter()
+          durations = []
+          for record in records:
+              exit_countries[record.get("exit_country") or "unknown"] += 1
+              colos[record.get("cloudflare_colo") or "unknown"] += 1
+              match_counts[record.get("source_country_matches_exit") or "unknown"] += 1
+              same_ip_counts[str(record.get("entry_exit_same_ip", False)).lower()] += 1
+              for flag in record.get("cloudflare_flags") or []:
+                  flag_counts[flag] += 1
+              duration = record.get("duration_ms")
+              if isinstance(duration, int):
+                  durations.append(duration)
+          durations.sort()
+
+          print()
+          print("| 结果解读 / Result signal | 数值 / Value |")
+          print("| --- | --- |")
+          print(f"| 有效率 / Valid rate | {percent(totals['valid_proxies'], totals['unique_proxies'])} |")
+          print(f"| 出口国家 Top / Exit countries | {md(top_items(exit_countries))} |")
+          print(f"| Cloudflare 机房 Top / Cloudflare colo | {md(top_items(colos))} |")
+          print(f"| 来源国家匹配 / Source country match | {md(top_items(match_counts))} |")
+          print(f"| 入口出口同 IP / Entry and exit same IP | {md(top_items(same_ip_counts))} |")
+          if durations:
+              print(f"| 耗时 / Duration ms | min:{durations[0]}, p50:{percentile(durations, 0.50)}, p95:{percentile(durations, 0.95)}, max:{durations[-1]} |")
+          else:
+              print("| 耗时 / Duration ms | none |")
+          print(f"| Cloudflare flags | {md(top_items(flag_counts))} |")
+
           print()
           print("| 数据源 / Source | 状态 / Status | 候选 / Candidates | 接受 / Accepted | 错误 / Error |")
           print("| --- | ---: | ---: | ---: | --- |")
@@ -156,7 +213,7 @@ jobs:
               url = source["url"]
               if len(url) > 96:
                   url = url[:93] + "..."
-              print(f"| `{url}` | {status} | {source['candidates']} | {source['accepted']} | {error} |")
+              print(f"| `{md(url)}` | {status} | {source['candidates']} | {source['accepted']} | {md(error)} |")
           PY
           else
             {

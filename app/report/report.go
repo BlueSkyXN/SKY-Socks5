@@ -48,9 +48,7 @@ type ValidatedProxy struct {
 	SourceCountryMatchesExit string            `json:"source_country_matches_exit,omitempty"`
 	CloudflareColo           string            `json:"cloudflare_colo,omitempty"`
 	CloudflareHTTP           string            `json:"cloudflare_http,omitempty"`
-	CloudflareTLS            string            `json:"cloudflare_tls,omitempty"`
-	CloudflareSNI            string            `json:"cloudflare_sni,omitempty"`
-	CloudflareKEX            string            `json:"cloudflare_kex,omitempty"`
+	CloudflareFlags          []string          `json:"cloudflare_flags,omitempty"`
 	StatusCode               int               `json:"status_code"`
 	DurationMillis           int64             `json:"duration_ms"`
 	ValidatedAt              string            `json:"validated_at"`

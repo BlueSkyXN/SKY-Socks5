@@ -28,9 +28,7 @@ type Result struct {
 	ExitCountry     string            `json:"exit_country,omitempty"`
 	CloudflareColo  string            `json:"cloudflare_colo,omitempty"`
 	CloudflareHTTP  string            `json:"cloudflare_http,omitempty"`
-	CloudflareTLS   string            `json:"cloudflare_tls,omitempty"`
-	CloudflareSNI   string            `json:"cloudflare_sni,omitempty"`
-	CloudflareKEX   string            `json:"cloudflare_kex,omitempty"`
+	CloudflareFlags []string          `json:"cloudflare_flags,omitempty"`
 	CloudflareTrace map[string]string `json:"cloudflare_trace,omitempty"`
 	Duration        time.Duration     `json:"-"`
 	DurationMillis  int64             `json:"duration_ms"`
@@ -139,9 +137,7 @@ func (r *Result) applyCloudflareTrace(body []byte) {
 	r.ExitCountry = trace["loc"]
 	r.CloudflareColo = trace["colo"]
 	r.CloudflareHTTP = trace["http"]
-	r.CloudflareTLS = trace["tls"]
-	r.CloudflareSNI = trace["sni"]
-	r.CloudflareKEX = trace["kex"]
+	r.CloudflareFlags = cloudflareTraceFlags(trace)
 }
 
 func parseCloudflareTrace(body string) map[string]string {
@@ -159,4 +155,21 @@ func parseCloudflareTrace(body string) map[string]string {
 		trace[key] = value
 	}
 	return trace
+}
+
+func cloudflareTraceFlags(trace map[string]string) []string {
+	keys := []string{"warp", "gateway", "rbi"}
+	flags := make([]string, 0, len(keys))
+	for _, key := range keys {
+		value := strings.TrimSpace(trace[key])
+		if value == "" {
+			continue
+		}
+		normalized := strings.ToLower(value)
+		if normalized == "off" || normalized == "none" {
+			continue
+		}
+		flags = append(flags, key+"="+value)
+	}
+	return flags
 }

@@ -61,7 +61,7 @@ go build -o bin/sky-socks5 .
 | `raw_proxies.txt` | Parsed proxy addresses before deduplication. |
 | `unique_proxies.txt` | Deduplicated proxy addresses. |
 | `validated_proxies.txt` | Deduplicated proxies that passed live validation. |
-| `validated_proxies.csv` | Reachable proxies plus selected fields for filtering: entry endpoint, source count, duplicate count, source metadata, exit IP/country, Cloudflare colo/http/tls/sni/kex, status, timing, and validation settings. |
+| `validated_proxies.csv` | Reachable proxies plus selected fields for filtering: entry endpoint, source count, duplicate count, source metadata, exit IP/country, Cloudflare colo/http/flags, status, timing, and validation settings. |
 | `proxy_report.json` | Machine-readable run report with source metadata, totals, output paths, validated proxy records, and raw Cloudflare trace maps. |
 
 ## Common flags
@@ -92,7 +92,9 @@ go run . \
 
 - **CI** runs `go test ./...` for program tests.
 - **Build** compiles Linux, macOS, and Windows archives and uploads them as workflow artifacts. It does not publish GitHub Releases.
-- **CD** runs the proxy validation flow inside GitHub Actions and uploads result artifacts. By default it uses every URL in `configs/sources.txt`; the optional `source_url` input is only for a one-source smoke run. Its job summary is bilingual and the artifact includes `validated_proxies.csv`.
+- **CD** runs the proxy validation flow inside GitHub Actions and uploads result artifacts. By default it uses every URL in `configs/sources.txt`; the optional `source_url` input is only for a one-source smoke run. Its bilingual job summary reports the validation inputs, totals, output line counts, exit country and Cloudflare colo distributions, country-match checks, timing percentiles, and artifact fields.
+
+See `docs/result-fields.md` for the result-field policy.
 
 ## Governance
 

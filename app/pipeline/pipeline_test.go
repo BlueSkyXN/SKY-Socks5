@@ -43,7 +43,7 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 		},
 		Validate: func(ctx context.Context, addresses []string, opts validate.Options) ([]validate.Result, error) {
 			return []validate.Result{
-				{Address: "1.1.1.1:1080", Reachable: true, StatusCode: 200, ExitIP: "198.51.100.10", ExitCountry: "US", CloudflareColo: "SJC", CloudflareSNI: "plaintext", CloudflareKEX: "X25519", CloudflareTrace: map[string]string{"ip": "198.51.100.10", "loc": "US"}},
+				{Address: "1.1.1.1:1080", Reachable: true, StatusCode: 200, ExitIP: "198.51.100.10", ExitCountry: "US", CloudflareColo: "SJC", CloudflareHTTP: "http/2", CloudflareFlags: []string{"warp=on"}, CloudflareTrace: map[string]string{"ip": "198.51.100.10", "loc": "US", "tls": "TLSv1.3", "sni": "plaintext", "kex": "X25519", "warp": "on"}},
 				{Address: "2.2.2.2:1080", Reachable: false, StatusCode: 500},
 				{Address: "3.3.3.3:1080", Reachable: true, StatusCode: 200, ExitIP: "203.0.113.10", ExitCountry: "FR", CloudflareColo: "CDG"},
 			}, nil
@@ -86,10 +86,35 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 	if len(csvRows) != 3 {
 		t.Fatalf("csv rows = %#v", csvRows)
 	}
+	wantHeader := []string{
+		"proxy_address",
+		"entry_host",
+		"entry_port",
+		"source_count",
+		"duplicate_count",
+		"source_urls",
+		"source_country",
+		"source_city",
+		"exit_ip",
+		"exit_country",
+		"entry_exit_same_ip",
+		"source_country_matches_exit",
+		"cloudflare_colo",
+		"cloudflare_http",
+		"cloudflare_flags",
+		"status_code",
+		"duration_ms",
+		"validated_at",
+		"probe_url",
+		"validation_timeout",
+	}
+	if !reflect.DeepEqual(csvRows[0], wantHeader) {
+		t.Fatalf("csv header = %#v", csvRows[0])
+	}
 	if csvRows[1][0] != "1.1.1.1:1080" || csvRows[1][3] != "2" || csvRows[1][4] != "2" || csvRows[1][8] != "198.51.100.10" || csvRows[1][9] != "US" {
 		t.Fatalf("first csv data row = %#v", csvRows[1])
 	}
-	if csvRows[1][15] != "plaintext" || csvRows[1][16] != "X25519" {
+	if csvRows[1][13] != "http/2" || csvRows[1][14] != "warp=on" || csvRows[1][15] != "200" {
 		t.Fatalf("first csv cloudflare fields = %#v", csvRows[1])
 	}
 	if len(writtenReport.ValidatedProxies) != 2 {
@@ -97,6 +122,9 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 	}
 	if writtenReport.ValidatedProxies[0].CloudflareTrace["ip"] != "198.51.100.10" {
 		t.Fatalf("validated proxy trace = %#v", writtenReport.ValidatedProxies[0].CloudflareTrace)
+	}
+	if writtenReport.ValidatedProxies[0].CloudflareTrace["kex"] != "X25519" {
+		t.Fatalf("raw trace should keep diagnostic fields = %#v", writtenReport.ValidatedProxies[0].CloudflareTrace)
 	}
 }
 
