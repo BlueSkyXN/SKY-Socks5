@@ -34,3 +34,10 @@ func TestCheckUsesConfiguredStatusPolicy(t *testing.T) {
 		t.Fatalf("Check() = %#v, want %#v", results, want)
 	}
 }
+
+func TestParseCloudflareTrace(t *testing.T) {
+	trace := parseCloudflareTrace("ip=203.0.113.10\nloc=FR\ncolo=CDG\nhttp=http/2\ntls=TLSv1.3\n")
+	if trace["ip"] != "203.0.113.10" || trace["loc"] != "FR" || trace["colo"] != "CDG" || trace["http"] != "http/2" || trace["tls"] != "TLSv1.3" {
+		t.Fatalf("trace = %#v", trace)
+	}
+}

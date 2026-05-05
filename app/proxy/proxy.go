@@ -15,6 +15,15 @@ type Proxy struct {
 	Port int    `json:"port"`
 }
 
+type Candidate struct {
+	Address       string
+	Host          string
+	Port          int
+	SourceCountry string
+	SourceCity    string
+	Raw           string
+}
+
 func Parse(raw string) (Proxy, error) {
 	token := firstToken(raw)
 	if token == "" {
@@ -48,6 +57,40 @@ func Normalize(raw string) (string, error) {
 		return "", err
 	}
 	return parsed.String(), nil
+}
+
+func ExtractCandidates(raw string) ([]Candidate, []error) {
+	fields := candidateFields(raw)
+	if len(fields) == 0 {
+		return nil, []error{errors.New("proxy line is empty")}
+	}
+	candidates := make([]Candidate, 0, len(fields))
+	errs := make([]error, 0)
+	for _, field := range fields {
+		candidate, err := ParseCandidate(field)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		candidates = append(candidates, candidate)
+	}
+	return candidates, errs
+}
+
+func ParseCandidate(raw string) (Candidate, error) {
+	token, sourceCountry, sourceCity := splitCandidateMetadata(raw)
+	parsed, err := Parse(token)
+	if err != nil {
+		return Candidate{}, err
+	}
+	return Candidate{
+		Address:       parsed.String(),
+		Host:          parsed.Host,
+		Port:          parsed.Port,
+		SourceCountry: sourceCountry,
+		SourceCity:    sourceCity,
+		Raw:           strings.TrimSpace(raw),
+	}, nil
 }
 
 func (p Proxy) String() string {
@@ -87,13 +130,35 @@ func firstToken(raw string) string {
 	return strings.TrimRight(fields[0], ",;")
 }
 
+func candidateFields(raw string) []string {
+	trimmed := strings.TrimSpace(strings.TrimPrefix(raw, "\uFEFF"))
+	if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+		return nil
+	}
+	return strings.Fields(trimmed)
+}
+
+func splitCandidateMetadata(raw string) (token string, sourceCountry string, sourceCity string) {
+	parts := strings.Split(strings.TrimSpace(strings.TrimRight(raw, ";")), ",")
+	if len(parts) > 0 {
+		token = strings.TrimSpace(parts[0])
+	}
+	if len(parts) > 1 {
+		sourceCountry = strings.TrimSpace(parts[1])
+	}
+	if len(parts) > 2 {
+		sourceCity = strings.TrimSpace(parts[2])
+	}
+	return token, sourceCountry, sourceCity
+}
+
 func splitHostPort(token string) (string, string, error) {
 	if strings.Contains(token, "://") {
 		parsed, err := url.Parse(token)
 		if err != nil {
 			return "", "", fmt.Errorf("invalid proxy URL %q: %w", token, err)
 		}
-		if parsed.Scheme != "socks5" && parsed.Scheme != "http" && parsed.Scheme != "https" {
+		if parsed.Scheme != "socks5" {
 			return "", "", fmt.Errorf("unsupported proxy scheme %q", parsed.Scheme)
 		}
 		host := parsed.Hostname()

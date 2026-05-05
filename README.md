@@ -11,7 +11,7 @@ Public proxies are noisy and untrusted. Use this project for research, testing, 
 3. Parses and normalizes SOCKS5 proxy addresses.
 4. Writes parsed and deduplicated proxy files.
 5. Validates proxies through a configurable probe URL.
-6. Writes a JSON report with source, parse, validation, and output metadata.
+6. Writes TXT, CSV, and JSON reports with source, parse, validation, and exit metadata.
 
 ## Requirements
 
@@ -61,6 +61,7 @@ go build -o bin/sky-socks5 .
 | `raw_proxies.txt` | Parsed proxy addresses before deduplication. |
 | `unique_proxies.txt` | Deduplicated proxy addresses. |
 | `validated_proxies.txt` | Deduplicated proxies that passed live validation. |
+| `validated_proxies.csv` | Reachable proxies plus entry endpoint, source metadata, Cloudflare trace exit IP/country/colo, status, and timing. |
 | `proxy_report.json` | Machine-readable run report with source and validation metadata. |
 
 ## Common flags
@@ -68,12 +69,12 @@ go build -o bin/sky-socks5 .
 - `-source-file` - newline-delimited source URL file. Defaults to `configs/sources.txt`.
 - `-output-dir` - directory for generated artifacts.
 - `-fetch-proxy` / `-proxy` - optional proxy used when fetching source lists.
-- `-probe-url` - HTTP or HTTPS URL used to validate candidate proxies.
+- `-probe-url` - HTTP or HTTPS URL used to validate candidate proxies. Defaults to Cloudflare trace so valid rows can include exit metadata.
 - `-valid-statuses` - comma-separated HTTP statuses accepted during validation. Defaults to `200`.
 - `-fetch-timeout` - timeout for fetching each source.
 - `-validate-timeout` - timeout for each proxy validation request.
 - `-validate-concurrency` / `-concurrency` - maximum validation workers.
-- `-raw-output`, `-unique-output`, `-validated-output`, `-report-output` - override output filenames or paths.
+- `-raw-output`, `-unique-output`, `-validated-output`, `-validated-csv-output`, `-report-output` - override output filenames or paths.
 
 Example:
 
@@ -82,7 +83,7 @@ go run . \
   -source-file configs/sources.txt \
   -output-dir generated \
   -fetch-proxy socks5://127.0.0.1:1080 \
-  -probe-url https://one.one.one.one \
+  -probe-url https://www.cloudflare.com/cdn-cgi/trace \
   -valid-statuses 200,204 \
   -validate-concurrency 100
 ```
@@ -91,7 +92,7 @@ go run . \
 
 - **Program Tests** runs `go test ./...`.
 - **Build** compiles Linux, macOS, and Windows archives and uploads them as workflow artifacts. It does not publish GitHub Releases.
-- **Proxy Results** runs the full source-fetch, deduplication, validation, and result-generation flow. By default it uses every URL in `configs/sources.txt`; the optional `source_url` input is only for a one-source smoke run.
+- **Proxy Results** runs the full source-fetch, deduplication, validation, and result-generation flow. By default it uses every URL in `configs/sources.txt`; the optional `source_url` input is only for a one-source smoke run. Its job summary is bilingual and the artifact includes `validated_proxies.csv`.
 
 ## Governance
 

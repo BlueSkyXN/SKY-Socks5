@@ -1,6 +1,7 @@
 package output
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,6 +42,19 @@ func WriteJSON(path string, payload any) error {
 	}
 	data = append(data, '\n')
 	return writeFile(path, data)
+}
+
+func WriteCSV(path string, rows [][]string) error {
+	var builder strings.Builder
+	writer := csv.NewWriter(&builder)
+	if err := writer.WriteAll(rows); err != nil {
+		return fmt.Errorf("write CSV records: %w", err)
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return fmt.Errorf("flush CSV records: %w", err)
+	}
+	return writeFile(path, []byte(builder.String()))
 }
 
 func writeFile(path string, data []byte) error {

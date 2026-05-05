@@ -19,8 +19,9 @@ const (
 	DefaultRawOutputFile       = "raw_proxies.txt"
 	DefaultUniqueOutputFile    = "unique_proxies.txt"
 	DefaultValidatedOutputFile = "validated_proxies.txt"
+	DefaultValidatedCSVFile    = "validated_proxies.csv"
 	DefaultReportOutputFile    = "proxy_report.json"
-	DefaultProbeURL            = "https://one.one.one.one"
+	DefaultProbeURL            = "https://www.cloudflare.com/cdn-cgi/trace"
 	DefaultFetchTimeout        = 15 * time.Second
 	DefaultValidateTimeout     = 10 * time.Second
 	DefaultValidateConcurrency = 100
@@ -33,6 +34,7 @@ type Config struct {
 	RawOutputPath       string
 	UniqueOutputPath    string
 	ValidatedOutputPath string
+	ValidatedCSVPath    string
 	ReportOutputPath    string
 	FetchProxy          string
 	ProbeURL            string
@@ -50,6 +52,7 @@ func Default() Config {
 		RawOutputPath:       DefaultRawOutputFile,
 		UniqueOutputPath:    DefaultUniqueOutputFile,
 		ValidatedOutputPath: DefaultValidatedOutputFile,
+		ValidatedCSVPath:    DefaultValidatedCSVFile,
 		ReportOutputPath:    DefaultReportOutputFile,
 		ProbeURL:            DefaultProbeURL,
 		ValidStatuses:       statuses,
@@ -70,6 +73,7 @@ func Parse(args []string) (Config, error) {
 		rawOutput           string
 		uniqueOutput        string
 		validatedOutput     string
+		validatedCSVOutput  string
 		reportOutput        string
 		fetchProxy          string
 		probeURL            string
@@ -84,6 +88,7 @@ func Parse(args []string) (Config, error) {
 	fs.StringVar(&rawOutput, "raw-output", DefaultRawOutputFile, "Output file for parsed proxies before deduplication")
 	fs.StringVar(&uniqueOutput, "unique-output", DefaultUniqueOutputFile, "Output file for deduplicated proxies")
 	fs.StringVar(&validatedOutput, "validated-output", DefaultValidatedOutputFile, "Output file for reachable proxies")
+	fs.StringVar(&validatedCSVOutput, "validated-csv-output", DefaultValidatedCSVFile, "Output CSV file for reachable proxy metadata")
 	fs.StringVar(&reportOutput, "report-output", DefaultReportOutputFile, "Output file for JSON run report")
 	fs.StringVar(&reportOutput, "meta-output", DefaultReportOutputFile, "Alias for -report-output")
 	fs.StringVar(&fetchProxy, "fetch-proxy", "", "Optional proxy used when fetching source lists")
@@ -150,10 +155,13 @@ func Parse(args []string) (Config, error) {
 	if cfg.ValidatedOutputPath, err = resolveOutputPath(cfg.OutputDir, validatedOutput); err != nil {
 		return Config{}, fmt.Errorf("validated output: %w", err)
 	}
+	if cfg.ValidatedCSVPath, err = resolveOutputPath(cfg.OutputDir, validatedCSVOutput); err != nil {
+		return Config{}, fmt.Errorf("validated CSV output: %w", err)
+	}
 	if cfg.ReportOutputPath, err = resolveOutputPath(cfg.OutputDir, reportOutput); err != nil {
 		return Config{}, fmt.Errorf("report output: %w", err)
 	}
-	if err := validateDistinctPaths(cfg.RawOutputPath, cfg.UniqueOutputPath, cfg.ValidatedOutputPath, cfg.ReportOutputPath); err != nil {
+	if err := validateDistinctPaths(cfg.RawOutputPath, cfg.UniqueOutputPath, cfg.ValidatedOutputPath, cfg.ValidatedCSVPath, cfg.ReportOutputPath); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -173,6 +181,8 @@ Flags:
         Output file for deduplicated proxies (default %q)
   -validated-output string
         Output file for reachable proxies (default %q)
+  -validated-csv-output string
+        Output CSV file for reachable proxy metadata (default %q)
   -report-output string
         Output file for JSON run report (default %q)
   -fetch-proxy string
@@ -187,7 +197,7 @@ Flags:
         Timeout for validating each proxy (default %s)
   -validate-concurrency int
         Maximum concurrent proxy validation workers (default %d)
-`, DefaultSourceFile, DefaultOutputDir, DefaultRawOutputFile, DefaultUniqueOutputFile, DefaultValidatedOutputFile, DefaultReportOutputFile, DefaultProbeURL, DefaultValidStatuses, DefaultFetchTimeout, DefaultValidateTimeout, DefaultValidateConcurrency)
+`, DefaultSourceFile, DefaultOutputDir, DefaultRawOutputFile, DefaultUniqueOutputFile, DefaultValidatedOutputFile, DefaultValidatedCSVFile, DefaultReportOutputFile, DefaultProbeURL, DefaultValidStatuses, DefaultFetchTimeout, DefaultValidateTimeout, DefaultValidateConcurrency)
 }
 
 func ParseStatuses(raw string) (map[int]struct{}, error) {

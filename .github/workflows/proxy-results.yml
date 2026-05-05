@@ -11,6 +11,14 @@ on:
         description: Timeout for fetching each source list
         required: true
         default: 15s
+      probe_url:
+        description: Probe URL used through each SOCKS5 proxy
+        required: true
+        default: https://www.cloudflare.com/cdn-cgi/trace
+      valid_statuses:
+        description: Comma-separated HTTP statuses accepted during validation
+        required: true
+        default: "200"
       validate_timeout:
         description: Per-proxy validation timeout
         required: true
@@ -48,6 +56,8 @@ jobs:
         env:
           SOURCE_URL: ${{ inputs.source_url }}
           FETCH_TIMEOUT: ${{ inputs.fetch_timeout }}
+          PROBE_URL: ${{ inputs.probe_url }}
+          VALID_STATUSES: ${{ inputs.valid_statuses }}
           VALIDATE_TIMEOUT: ${{ inputs.validate_timeout }}
           VALIDATE_CONCURRENCY: ${{ inputs.validate_concurrency }}
         run: |
@@ -57,6 +67,8 @@ jobs:
           args=(
             -output-dir generated
             -fetch-timeout "${FETCH_TIMEOUT}"
+            -probe-url "${PROBE_URL}"
+            -valid-statuses "${VALID_STATUSES}"
             -validate-timeout "${VALIDATE_TIMEOUT}"
             -validate-concurrency "${VALIDATE_CONCURRENCY}"
           )
@@ -74,26 +86,32 @@ jobs:
         env:
           SOURCE_URL: ${{ inputs.source_url }}
           FETCH_TIMEOUT: ${{ inputs.fetch_timeout }}
+          PROBE_URL: ${{ inputs.probe_url }}
+          VALID_STATUSES: ${{ inputs.valid_statuses }}
           VALIDATE_TIMEOUT: ${{ inputs.validate_timeout }}
           VALIDATE_CONCURRENCY: ${{ inputs.validate_concurrency }}
         run: |
           {
-            echo "## Proxy Results"
+            echo "## 代理结果 / Proxy Results"
             echo
-            echo "- Branch: \`${GITHUB_REF_NAME}\`"
-            echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Output directory: \`generated/\`"
+            echo "- 分支 / Branch: \`${GITHUB_REF_NAME}\`"
+            echo "- 提交 / Commit: \`${GITHUB_SHA}\`"
+            echo "- 输出目录 / Output directory: \`generated/\`"
             if [ -n "${SOURCE_URL}" ]; then
-              echo "- Source mode: \`single-source smoke run\`"
-              echo "- Source URL: \`${SOURCE_URL}\`"
-              echo "- Default source file: \`configs/sources.txt\` (not used for this smoke run)"
+              echo "- 数据源模式 / Source mode: \`single-source smoke run\`"
+              echo "- 数据源 URL / Source URL: \`${SOURCE_URL}\`"
+              echo "- 默认聚合源文件 / Default source file: \`configs/sources.txt\` (not used for this smoke run)"
             else
-              echo "- Source mode: \`configured aggregate list\`"
-              echo "- Source file: \`configs/sources.txt\`"
+              echo "- 数据源模式 / Source mode: \`configured aggregate list\`"
+              echo "- 数据源文件 / Source file: \`configs/sources.txt\`"
             fi
-            echo "- Fetch timeout: \`${FETCH_TIMEOUT}\`"
-            echo "- Validate timeout: \`${VALIDATE_TIMEOUT}\`"
-            echo "- Validate concurrency: \`${VALIDATE_CONCURRENCY}\`"
+            echo "- 探测 URL / Probe URL: \`${PROBE_URL}\`"
+            echo "- 有效状态码 / Valid statuses: \`${VALID_STATUSES}\`"
+            echo "- 抓取超时 / Fetch timeout: \`${FETCH_TIMEOUT}\`"
+            echo "- 验证超时 / Validate timeout: \`${VALIDATE_TIMEOUT}\`"
+            echo "- 验证并发 / Validate concurrency: \`${VALIDATE_CONCURRENCY}\`"
+            echo "- 有效性口径 / Validation policy: SOCKS5 proxy must complete an HTTP GET to the probe URL and return an accepted status."
+            echo "- 出口信息 / Exit metadata: Cloudflare trace fields are parsed into \`validated_proxies.csv\` when the probe URL returns them."
           } >> "${GITHUB_STEP_SUMMARY}"
 
           if [ -f generated/proxy_report.json ]; then
@@ -103,27 +121,45 @@ jobs:
 
           report = json.loads(Path("generated/proxy_report.json").read_text())
           totals = report["totals"]
-          print(f"- Sources: {totals['source_urls']}")
-          print(f"- Fetch errors: {totals['fetch_errors']}")
-          print(f"- Raw candidates: {totals['raw_candidates']}")
-          print(f"- Parsed proxies: {totals['parsed_proxies']}")
-          print(f"- Unique proxies: {totals['unique_proxies']}")
-          print(f"- Valid proxies: {totals['valid_proxies']}")
-          print(f"- Invalid proxies: {totals['invalid_proxies']}")
           print()
-          print("| File | Lines |")
+          print("| 指标 / Metric | 数值 / Value |")
           print("| --- | ---: |")
-          for name in ["raw_proxies.txt", "unique_proxies.txt", "validated_proxies.txt"]:
+          rows = [
+              ("数据源数量 / Sources", totals["source_urls"]),
+              ("抓取错误 / Fetch errors", totals["fetch_errors"]),
+              ("原始候选 / Raw candidates", totals["raw_candidates"]),
+              ("解析成功 / Parsed proxies", totals["parsed_proxies"]),
+              ("解析错误 / Parse errors", totals["parse_errors"]),
+              ("去重后 / Unique proxies", totals["unique_proxies"]),
+              ("有效代理 / Valid proxies", totals["valid_proxies"]),
+              ("无效代理 / Invalid proxies", totals["invalid_proxies"]),
+          ]
+          for label, value in rows:
+              print(f"| {label} | {value} |")
+          print()
+          print("| 文件 / File | 行数 / Lines |")
+          print("| --- | ---: |")
+          for name in ["raw_proxies.txt", "unique_proxies.txt", "validated_proxies.txt", "validated_proxies.csv"]:
               path = Path("generated") / name
               if path.exists():
                   count = len(path.read_text().splitlines())
                   print(f"| `{name}` | {count} |")
           print("| `proxy_report.json` | 1 |")
+          print()
+          print("| 数据源 / Source | 状态 / Status | 候选 / Candidates | 接受 / Accepted | 错误 / Error |")
+          print("| --- | ---: | ---: | ---: | --- |")
+          for source in report["sources"]:
+              status = source.get("status_code", "")
+              error = source.get("error", "")
+              url = source["url"]
+              if len(url) > 96:
+                  url = url[:93] + "..."
+              print(f"| `{url}` | {status} | {source['candidates']} | {source['accepted']} | {error} |")
           PY
           else
             {
               echo
-              echo "Generation did not produce \`generated/proxy_report.json\`."
+              echo "未生成报告 / Generation did not produce \`generated/proxy_report.json\`."
             } >> "${GITHUB_STEP_SUMMARY}"
           fi
 

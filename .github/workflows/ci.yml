@@ -37,15 +37,16 @@ jobs:
           fi
 
           {
-            echo "## Program Tests"
+            echo "## 程序测试 / Program Tests"
             echo
-            echo "- Result: ${result}"
-            echo "- Branch: \`${GITHUB_REF_NAME}\`"
-            echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Go: \`$(go version)\`"
-            echo "- Command: \`go test ./...\`"
+            echo "- 结果 / Result: \`${result}\`"
+            echo "- 分支 / Branch: \`${GITHUB_REF_NAME}\`"
+            echo "- 提交 / Commit: \`${GITHUB_SHA}\`"
+            echo "- Go 版本 / Go version: \`$(go version)\`"
+            echo "- 测试命令 / Test command: \`go test ./...\`"
+            echo "- 覆盖范围 / Scope: all Go packages under this repository"
             echo
-            echo "<details><summary>go test output</summary>"
+            echo "<details><summary>测试日志 / go test output</summary>"
             echo
             echo '```text'
             cat /tmp/go-test.log

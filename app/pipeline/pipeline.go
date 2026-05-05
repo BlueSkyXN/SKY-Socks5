@@ -22,15 +22,26 @@ type Dependencies struct {
 	FetchAll    func(ctx context.Context, urls []string, opts fetch.Options) []fetch.Result
 	Validate    func(ctx context.Context, addresses []string, opts validate.Options) ([]validate.Result, error)
 	WriteLines  func(path string, lines []string, dedupe bool) error
+	WriteCSV    func(path string, rows [][]string) error
 	WriteJSON   func(path string, payload any) error
 	Now         func() time.Time
 }
 
 type Result struct {
-	Raw       []string
-	Unique    []string
-	Validated []string
-	Metadata  report.Metadata
+	Raw          []string
+	Unique       []string
+	Validated    []string
+	ValidatedCSV [][]string
+	Metadata     report.Metadata
+}
+
+type candidateInfo struct {
+	Address       string
+	Host          string
+	Port          int
+	SourceURLs    []string
+	SourceCountry string
+	SourceCity    string
 }
 
 func RunCLI(ctx context.Context, args []string, stdout io.Writer) error {
@@ -48,7 +59,7 @@ func RunCLI(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	fmt.Fprintf(
 		stdout,
-		"sources=%d raw=%d unique=%d valid=%d raw_output=%s unique_output=%s validated_output=%s report=%s\n",
+		"sources=%d raw=%d unique=%d valid=%d raw_output=%s unique_output=%s validated_output=%s validated_csv=%s report=%s\n",
 		result.Metadata.Totals.SourceURLs,
 		len(result.Raw),
 		len(result.Unique),
@@ -56,6 +67,7 @@ func RunCLI(ctx context.Context, args []string, stdout io.Writer) error {
 		cfg.RawOutputPath,
 		cfg.UniqueOutputPath,
 		cfg.ValidatedOutputPath,
+		cfg.ValidatedCSVPath,
 		cfg.ReportOutputPath,
 	)
 	return nil
@@ -72,10 +84,11 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 		ValidationTimeout: cfg.ValidateTimeout.String(),
 		ValidateWorkers:   cfg.ValidateConcurrency,
 		Outputs: report.Outputs{
-			RawPath:       cfg.RawOutputPath,
-			UniquePath:    cfg.UniqueOutputPath,
-			ValidatedPath: cfg.ValidatedOutputPath,
-			ReportPath:    cfg.ReportOutputPath,
+			RawPath:          cfg.RawOutputPath,
+			UniquePath:       cfg.UniqueOutputPath,
+			ValidatedPath:    cfg.ValidatedOutputPath,
+			ValidatedCSVPath: cfg.ValidatedCSVPath,
+			ReportPath:       cfg.ReportOutputPath,
 		},
 	}
 
@@ -93,6 +106,7 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 	raw := make([]string, 0)
 	unique := make([]string, 0)
 	seen := make(map[string]struct{})
+	candidateIndex := make(map[string]*candidateInfo)
 	for _, fetched := range fetchResults {
 		sourceMeta := report.Source{
 			URL:            fetched.URL,
@@ -104,21 +118,25 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 			meta.Totals.FetchErrors++
 		}
 		for _, line := range fetched.Lines {
-			sourceMeta.Candidates++
-			meta.Totals.RawCandidates++
-			normalized, err := proxy.Normalize(line)
-			if err != nil {
-				meta.Totals.ParseErrors++
+			candidates, errs := proxy.ExtractCandidates(line)
+			sourceMeta.Candidates += len(candidates) + len(errs)
+			meta.Totals.RawCandidates += len(candidates) + len(errs)
+			meta.Totals.ParseErrors += len(errs)
+			for _, candidate := range candidates {
+				meta.Totals.ParsedProxies++
+				sourceMeta.Accepted++
+				raw = append(raw, candidate.Address)
+				trackCandidate(candidateIndex, fetched.URL, candidate)
+				if _, ok := seen[candidate.Address]; ok {
+					continue
+				}
+				seen[candidate.Address] = struct{}{}
+				unique = append(unique, candidate.Address)
+			}
+			if len(candidates) > 0 || len(errs) > 0 {
 				continue
 			}
-			meta.Totals.ParsedProxies++
-			sourceMeta.Accepted++
-			raw = append(raw, normalized)
-			if _, ok := seen[normalized]; ok {
-				continue
-			}
-			seen[normalized] = struct{}{}
-			unique = append(unique, normalized)
+			meta.Totals.ParseErrors++
 		}
 		meta.Sources = append(meta.Sources, sourceMeta)
 	}
@@ -136,9 +154,11 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 		return Result{}, fmt.Errorf("validate proxies: %w", err)
 	}
 	validated := make([]string, 0, len(validationResults))
+	validatedCSV := validatedCSVHeader()
 	for _, validationResult := range validationResults {
 		if validationResult.Reachable {
 			validated = append(validated, validationResult.Address)
+			validatedCSV = append(validatedCSV, validatedCSVRow(validationResult, candidateIndex[validationResult.Address], cfg.ProbeURL))
 		}
 	}
 	proxy.SortStrings(validated)
@@ -154,11 +174,14 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 	if err := deps.WriteLines(cfg.ValidatedOutputPath, validated, true); err != nil {
 		return Result{}, fmt.Errorf("write validated output: %w", err)
 	}
+	if err := deps.WriteCSV(cfg.ValidatedCSVPath, validatedCSV); err != nil {
+		return Result{}, fmt.Errorf("write validated CSV output: %w", err)
+	}
 	if err := deps.WriteJSON(cfg.ReportOutputPath, meta); err != nil {
 		return Result{}, fmt.Errorf("write report output: %w", err)
 	}
 
-	return Result{Raw: raw, Unique: unique, Validated: validated, Metadata: meta}, nil
+	return Result{Raw: raw, Unique: unique, Validated: validated, ValidatedCSV: validatedCSV, Metadata: meta}, nil
 }
 
 func DefaultDependencies() Dependencies {
@@ -167,6 +190,7 @@ func DefaultDependencies() Dependencies {
 		FetchAll:    fetch.All,
 		Validate:    validate.Check,
 		WriteLines:  output.WriteLines,
+		WriteCSV:    output.WriteCSV,
 		WriteJSON:   output.WriteJSON,
 		Now:         time.Now,
 	}
@@ -186,6 +210,9 @@ func (d Dependencies) withDefaults() Dependencies {
 	if d.WriteLines == nil {
 		d.WriteLines = defaults.WriteLines
 	}
+	if d.WriteCSV == nil {
+		d.WriteCSV = defaults.WriteCSV
+	}
 	if d.WriteJSON == nil {
 		d.WriteJSON = defaults.WriteJSON
 	}
@@ -193,4 +220,102 @@ func (d Dependencies) withDefaults() Dependencies {
 		d.Now = defaults.Now
 	}
 	return d
+}
+
+func trackCandidate(index map[string]*candidateInfo, sourceURL string, candidate proxy.Candidate) {
+	info, ok := index[candidate.Address]
+	if !ok {
+		info = &candidateInfo{
+			Address:       candidate.Address,
+			Host:          candidate.Host,
+			Port:          candidate.Port,
+			SourceCountry: candidate.SourceCountry,
+			SourceCity:    candidate.SourceCity,
+		}
+		index[candidate.Address] = info
+	}
+	info.SourceURLs = appendUnique(info.SourceURLs, sourceURL)
+	if info.SourceCountry == "" {
+		info.SourceCountry = candidate.SourceCountry
+	}
+	if info.SourceCity == "" {
+		info.SourceCity = candidate.SourceCity
+	}
+}
+
+func appendUnique(values []string, value string) []string {
+	if value == "" {
+		return values
+	}
+	for _, existing := range values {
+		if existing == value {
+			return values
+		}
+	}
+	return append(values, value)
+}
+
+func validatedCSVHeader() [][]string {
+	return [][]string{{
+		"proxy_address",
+		"entry_host",
+		"entry_port",
+		"source_urls",
+		"source_country",
+		"source_city",
+		"exit_ip",
+		"exit_country",
+		"cloudflare_colo",
+		"cloudflare_http",
+		"cloudflare_tls",
+		"status_code",
+		"duration_ms",
+		"probe_url",
+	}}
+}
+
+func validatedCSVRow(result validate.Result, info *candidateInfo, probeURL string) []string {
+	entryHost := ""
+	entryPort := ""
+	sourceURLs := ""
+	sourceCountry := ""
+	sourceCity := ""
+	if info != nil {
+		entryHost = info.Host
+		entryPort = fmt.Sprintf("%d", info.Port)
+		sourceURLs = joinCSVList(info.SourceURLs)
+		sourceCountry = info.SourceCountry
+		sourceCity = info.SourceCity
+	}
+	return []string{
+		result.Address,
+		entryHost,
+		entryPort,
+		sourceURLs,
+		sourceCountry,
+		sourceCity,
+		result.ExitIP,
+		result.ExitCountry,
+		result.CloudflareColo,
+		result.CloudflareHTTP,
+		result.CloudflareTLS,
+		fmt.Sprintf("%d", result.StatusCode),
+		fmt.Sprintf("%d", result.DurationMillis),
+		probeURL,
+	}
+}
+
+func joinCSVList(values []string) string {
+	return join(values, " | ")
+}
+
+func join(values []string, sep string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	out := values[0]
+	for _, value := range values[1:] {
+		out += sep + value
+	}
+	return out
 }

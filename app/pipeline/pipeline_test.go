@@ -23,11 +23,13 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 	cfg.RawOutputPath = filepath.Join(tmp, "raw.txt")
 	cfg.UniqueOutputPath = filepath.Join(tmp, "unique.txt")
 	cfg.ValidatedOutputPath = filepath.Join(tmp, "validated.txt")
+	cfg.ValidatedCSVPath = filepath.Join(tmp, "validated.csv")
 	cfg.ReportOutputPath = filepath.Join(tmp, "report.json")
 	cfg.ValidStatuses = statuses
 	cfg.ValidateConcurrency = 2
 
 	writes := make(map[string][]string)
+	var csvRows [][]string
 	var writtenReport report.Metadata
 	result, err := Run(context.Background(), cfg, Dependencies{
 		LoadSources: func(path string) ([]string, error) {
@@ -41,13 +43,17 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 		},
 		Validate: func(ctx context.Context, addresses []string, opts validate.Options) ([]validate.Result, error) {
 			return []validate.Result{
-				{Address: "1.1.1.1:1080", Reachable: true, StatusCode: 200},
+				{Address: "1.1.1.1:1080", Reachable: true, StatusCode: 200, ExitIP: "198.51.100.10", ExitCountry: "US", CloudflareColo: "SJC"},
 				{Address: "2.2.2.2:1080", Reachable: false, StatusCode: 500},
-				{Address: "3.3.3.3:1080", Reachable: true, StatusCode: 200},
+				{Address: "3.3.3.3:1080", Reachable: true, StatusCode: 200, ExitIP: "203.0.113.10", ExitCountry: "FR", CloudflareColo: "CDG"},
 			}, nil
 		},
 		WriteLines: func(path string, lines []string, dedupe bool) error {
 			writes[filepath.Base(path)] = append([]string(nil), lines...)
+			return nil
+		},
+		WriteCSV: func(path string, rows [][]string) error {
+			csvRows = rows
 			return nil
 		},
 		WriteJSON: func(path string, payload any) error {
@@ -73,6 +79,15 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 	}
 	if writtenReport.Totals.ParseErrors != 1 || writtenReport.Totals.UniqueProxies != 3 || writtenReport.Totals.ValidProxies != 2 {
 		t.Fatalf("report totals = %#v", writtenReport.Totals)
+	}
+	if writtenReport.Outputs.ValidatedCSVPath != cfg.ValidatedCSVPath {
+		t.Fatalf("ValidatedCSVPath = %q", writtenReport.Outputs.ValidatedCSVPath)
+	}
+	if len(csvRows) != 3 {
+		t.Fatalf("csv rows = %#v", csvRows)
+	}
+	if csvRows[1][0] != "1.1.1.1:1080" || csvRows[1][6] != "198.51.100.10" || csvRows[1][7] != "US" {
+		t.Fatalf("first csv data row = %#v", csvRows[1])
 	}
 }
 

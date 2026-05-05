@@ -3,8 +3,10 @@ package validate
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,6 +24,11 @@ type Result struct {
 	Reachable      bool          `json:"reachable"`
 	StatusCode     int           `json:"status_code,omitempty"`
 	Error          string        `json:"error,omitempty"`
+	ExitIP         string        `json:"exit_ip,omitempty"`
+	ExitCountry    string        `json:"exit_country,omitempty"`
+	CloudflareColo string        `json:"cloudflare_colo,omitempty"`
+	CloudflareHTTP string        `json:"cloudflare_http,omitempty"`
+	CloudflareTLS  string        `json:"cloudflare_tls,omitempty"`
 	Duration       time.Duration `json:"-"`
 	DurationMillis int64         `json:"duration_ms"`
 }
@@ -106,12 +113,44 @@ func probeHTTP(ctx context.Context, address string, opts Options) (result Result
 		return result
 	}
 	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	if err != nil {
+		result.Error = err.Error()
+		return result
+	}
 
 	result.StatusCode = resp.StatusCode
+	result.applyCloudflareTrace(body)
 	if _, ok := opts.ValidStatuses[resp.StatusCode]; ok {
 		result.Reachable = true
 		return result
 	}
 	result.Error = fmt.Sprintf("unexpected status: %d", resp.StatusCode)
 	return result
+}
+
+func (r *Result) applyCloudflareTrace(body []byte) {
+	trace := parseCloudflareTrace(string(body))
+	r.ExitIP = trace["ip"]
+	r.ExitCountry = trace["loc"]
+	r.CloudflareColo = trace["colo"]
+	r.CloudflareHTTP = trace["http"]
+	r.CloudflareTLS = trace["tls"]
+}
+
+func parseCloudflareTrace(body string) map[string]string {
+	trace := make(map[string]string)
+	for _, line := range strings.Split(body, "\n") {
+		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if key == "" || value == "" {
+			continue
+		}
+		trace[key] = value
+	}
+	return trace
 }

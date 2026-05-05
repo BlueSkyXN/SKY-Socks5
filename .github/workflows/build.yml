@@ -65,14 +65,15 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Build"
+            echo "## 构建 / Build"
             echo
-            echo "- Branch: \`${GITHUB_REF_NAME}\`"
-            echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Output directory: \`dist/\`"
-            echo "- Publish release: \`false\`"
+            echo "- 分支 / Branch: \`${GITHUB_REF_NAME}\`"
+            echo "- 提交 / Commit: \`${GITHUB_SHA}\`"
+            echo "- 输出目录 / Output directory: \`dist/\`"
+            echo "- 发布 Release / Publish release: \`false\`"
+            echo "- 构建平台 / Targets: Linux amd64/arm64, macOS amd64/arm64, Windows amd64"
             echo
-            echo "| Asset | Size |"
+            echo "| 构建产物 / Asset | 大小 / Size |"
             echo "| --- | ---: |"
             while IFS= read -r asset; do
               size=$(du -h "${asset}" | awk '{print $1}')

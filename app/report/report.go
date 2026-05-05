@@ -15,10 +15,11 @@ type Source struct {
 }
 
 type Outputs struct {
-	RawPath       string `json:"raw_path"`
-	UniquePath    string `json:"unique_path"`
-	ValidatedPath string `json:"validated_path"`
-	ReportPath    string `json:"report_path"`
+	RawPath          string `json:"raw_path"`
+	UniquePath       string `json:"unique_path"`
+	ValidatedPath    string `json:"validated_path"`
+	ValidatedCSVPath string `json:"validated_csv_path"`
+	ReportPath       string `json:"report_path"`
 }
 
 type Totals struct {
