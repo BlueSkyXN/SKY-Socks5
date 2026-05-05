@@ -32,13 +32,12 @@ The default list includes these smaller raw text sources from the May 2026 sourc
 https://raw.githubusercontent.com/ClearProxy/checked-proxy-list/main/socks5/raw/all.txt
 https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks5.txt
 https://raw.githubusercontent.com/Thordata/awesome-free-proxy-list/main/proxies/socks5.txt
-https://raw.githubusercontent.com/Sage520/Proxy-List/main/socks5.txt
 https://raw.githubusercontent.com/proxygenerator1/ProxyGenerator/main/Stable/socks5.txt
 https://raw.githubusercontent.com/proxygenerator1/ProxyGenerator/main/MostStable/socks5.txt
 https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/socks5.txt
 ```
 
-Larger compatible feeds such as `r00tee/Proxy-List`, `dpangestuw/Free-Proxy`, `iplocate/free-proxy-list`, `vmheaven/VMHeaven.io-Free-Proxy-List`, and `SoliSpirit/proxy-list` are intentionally not enabled by default yet. They should be compared through CD per-source `unique_proxies` and `valid_proxies` results before becoming part of the default aggregate list. `monosans/proxy-list` is also kept out until its raw endpoint consistently returns a non-empty list. Meta-source URL lists, such as `gfpcom/free-proxy-list` `sources/socks5.txt`, need nested-source support before they can be used directly.
+Larger compatible feeds such as `r00tee/Proxy-List`, `dpangestuw/Free-Proxy`, `iplocate/free-proxy-list`, `vmheaven/VMHeaven.io-Free-Proxy-List`, and `SoliSpirit/proxy-list` are intentionally not enabled by default yet. They should be compared through CD per-source `unique_proxies` and `valid_proxies` results before becoming part of the default aggregate list. `monosans/proxy-list` is also kept out until its raw endpoint consistently returns a non-empty list, and `Sage520/Proxy-List` is kept out until CD shows non-zero valid contribution. Meta-source URL lists, such as `gfpcom/free-proxy-list` `sources/socks5.txt`, need nested-source support before they can be used directly.
 
 ## ProxyScrape
 
