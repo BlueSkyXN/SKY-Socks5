@@ -23,4 +23,4 @@ SKY-Socks5 is intentionally structured as a small Go CLI rather than a service o
 
 ## Governance
 
-Changes to `main` should go through pull requests with CI and CODEOWNERS review. Workflow files are part of the repository control plane and should be reviewed with the same care as application code.
+Changes to `main` should go through pull requests with CI and CODEOWNERS review. Workflow files are part of the repository control plane and should be reviewed with the same care as application code. The current workflow roles are CI for program tests, Build for binaries, and CD for proxy validation in the GitHub Actions environment.

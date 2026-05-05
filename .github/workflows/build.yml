@@ -71,6 +71,7 @@ jobs:
             echo "- 提交 / Commit: \`${GITHUB_SHA}\`"
             echo "- 输出目录 / Output directory: \`dist/\`"
             echo "- 发布 Release / Publish release: \`false\`"
+            echo "- 职责 / Responsibility: build artifacts only, no release publishing"
             echo "- 构建平台 / Targets: Linux amd64/arm64, macOS amd64/arm64, Windows amd64"
             echo
             echo "| 构建产物 / Asset | 大小 / Size |"

@@ -1,4 +1,4 @@
-name: Proxy Results
+name: CD
 
 on:
   workflow_dispatch:
@@ -32,11 +32,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: proxy-results
+  group: cd-proxy-validation
   cancel-in-progress: true
 
 jobs:
-  generate:
+  proxy-validation:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -50,7 +50,7 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Generate proxy results
+      - name: Run proxy validation
         id: generate
         shell: bash
         env:
@@ -80,7 +80,7 @@ jobs:
 
           go run . "${args[@]}"
 
-      - name: Summarize proxy results
+      - name: Summarize CD proxy validation
         if: always()
         shell: bash
         env:
@@ -92,11 +92,12 @@ jobs:
           VALIDATE_CONCURRENCY: ${{ inputs.validate_concurrency }}
         run: |
           {
-            echo "## 代理结果 / Proxy Results"
+            echo "## 持续交付代理评测 / CD Proxy Validation"
             echo
             echo "- 分支 / Branch: \`${GITHUB_REF_NAME}\`"
             echo "- 提交 / Commit: \`${GITHUB_SHA}\`"
             echo "- 输出目录 / Output directory: \`generated/\`"
+            echo "- 职责 / Responsibility: run proxy validation in GitHub Actions environment and upload result artifacts"
             if [ -n "${SOURCE_URL}" ]; then
               echo "- 数据源模式 / Source mode: \`single-source smoke run\`"
               echo "- 数据源 URL / Source URL: \`${SOURCE_URL}\`"
@@ -163,10 +164,10 @@ jobs:
             } >> "${GITHUB_STEP_SUMMARY}"
           fi
 
-      - name: Upload proxy results
+      - name: Upload CD proxy validation results
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: proxy-results-${{ github.run_id }}
+          name: cd-proxy-results-${{ github.run_id }}
           path: generated/
           if-no-files-found: error
           retention-days: 14

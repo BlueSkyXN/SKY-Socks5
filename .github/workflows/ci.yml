@@ -1,4 +1,4 @@
-name: Program Tests
+name: CI
 
 on:
   push:
@@ -37,13 +37,14 @@ jobs:
           fi
 
           {
-            echo "## 程序测试 / Program Tests"
+            echo "## 持续集成 / CI"
             echo
             echo "- 结果 / Result: \`${result}\`"
             echo "- 分支 / Branch: \`${GITHUB_REF_NAME}\`"
             echo "- 提交 / Commit: \`${GITHUB_SHA}\`"
             echo "- Go 版本 / Go version: \`$(go version)\`"
             echo "- 测试命令 / Test command: \`go test ./...\`"
+            echo "- 职责 / Responsibility: program tests only"
             echo "- 覆盖范围 / Scope: all Go packages under this repository"
             echo
             echo "<details><summary>测试日志 / go test output</summary>"

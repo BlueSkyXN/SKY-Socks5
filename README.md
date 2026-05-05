@@ -52,7 +52,7 @@ go build -o bin/sky-socks5 .
 | `app/` | Application packages for config, source loading, fetching, parsing, validation, output, reporting, and pipeline orchestration. |
 | `configs/sources.txt` | Default newline-delimited SOCKS5 source list. |
 | `docs/` | Architecture and source-management notes. |
-| `.github/workflows/` | Program tests, build artifacts, and full proxy result generation. |
+| `.github/workflows/` | CI tests, build artifacts, and CD proxy validation in GitHub Actions. |
 
 ## Output files
 
@@ -90,9 +90,9 @@ go run . \
 
 ## GitHub automation
 
-- **Program Tests** runs `go test ./...`.
+- **CI** runs `go test ./...` for program tests.
 - **Build** compiles Linux, macOS, and Windows archives and uploads them as workflow artifacts. It does not publish GitHub Releases.
-- **Proxy Results** runs the full source-fetch, deduplication, validation, and result-generation flow. By default it uses every URL in `configs/sources.txt`; the optional `source_url` input is only for a one-source smoke run. Its job summary is bilingual and the artifact includes `validated_proxies.csv`.
+- **CD** runs the proxy validation flow inside GitHub Actions and uploads result artifacts. By default it uses every URL in `configs/sources.txt`; the optional `source_url` input is only for a one-source smoke run. Its job summary is bilingual and the artifact includes `validated_proxies.csv`.
 
 ## Governance
 
