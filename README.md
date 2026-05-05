@@ -61,8 +61,8 @@ go build -o bin/sky-socks5 .
 | `raw_proxies.txt` | Parsed proxy addresses before deduplication. |
 | `unique_proxies.txt` | Deduplicated proxy addresses. |
 | `validated_proxies.txt` | Deduplicated proxies that passed live validation. |
-| `validated_proxies.csv` | Reachable proxies plus entry endpoint, source metadata, Cloudflare trace exit IP/country/colo, status, and timing. |
-| `proxy_report.json` | Machine-readable run report with source and validation metadata. |
+| `validated_proxies.csv` | Reachable proxies plus selected fields for filtering: entry endpoint, source count, duplicate count, source metadata, exit IP/country, Cloudflare colo/http/tls/sni/kex, status, timing, and validation settings. |
+| `proxy_report.json` | Machine-readable run report with source metadata, totals, output paths, validated proxy records, and raw Cloudflare trace maps. |
 
 ## Common flags
 

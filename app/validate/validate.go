@@ -20,17 +20,20 @@ type Options struct {
 }
 
 type Result struct {
-	Address        string        `json:"address"`
-	Reachable      bool          `json:"reachable"`
-	StatusCode     int           `json:"status_code,omitempty"`
-	Error          string        `json:"error,omitempty"`
-	ExitIP         string        `json:"exit_ip,omitempty"`
-	ExitCountry    string        `json:"exit_country,omitempty"`
-	CloudflareColo string        `json:"cloudflare_colo,omitempty"`
-	CloudflareHTTP string        `json:"cloudflare_http,omitempty"`
-	CloudflareTLS  string        `json:"cloudflare_tls,omitempty"`
-	Duration       time.Duration `json:"-"`
-	DurationMillis int64         `json:"duration_ms"`
+	Address         string            `json:"address"`
+	Reachable       bool              `json:"reachable"`
+	StatusCode      int               `json:"status_code,omitempty"`
+	Error           string            `json:"error,omitempty"`
+	ExitIP          string            `json:"exit_ip,omitempty"`
+	ExitCountry     string            `json:"exit_country,omitempty"`
+	CloudflareColo  string            `json:"cloudflare_colo,omitempty"`
+	CloudflareHTTP  string            `json:"cloudflare_http,omitempty"`
+	CloudflareTLS   string            `json:"cloudflare_tls,omitempty"`
+	CloudflareSNI   string            `json:"cloudflare_sni,omitempty"`
+	CloudflareKEX   string            `json:"cloudflare_kex,omitempty"`
+	CloudflareTrace map[string]string `json:"cloudflare_trace,omitempty"`
+	Duration        time.Duration     `json:"-"`
+	DurationMillis  int64             `json:"duration_ms"`
 }
 
 type ProbeFunc func(ctx context.Context, address string, opts Options) Result
@@ -131,11 +134,14 @@ func probeHTTP(ctx context.Context, address string, opts Options) (result Result
 
 func (r *Result) applyCloudflareTrace(body []byte) {
 	trace := parseCloudflareTrace(string(body))
+	r.CloudflareTrace = trace
 	r.ExitIP = trace["ip"]
 	r.ExitCountry = trace["loc"]
 	r.CloudflareColo = trace["colo"]
 	r.CloudflareHTTP = trace["http"]
 	r.CloudflareTLS = trace["tls"]
+	r.CloudflareSNI = trace["sni"]
+	r.CloudflareKEX = trace["kex"]
 }
 
 func parseCloudflareTrace(body string) map[string]string {

@@ -33,19 +33,46 @@ type Totals struct {
 	InvalidProxies int `json:"invalid_proxies"`
 }
 
+type ValidatedProxy struct {
+	ProxyAddress             string            `json:"proxy_address"`
+	EntryHost                string            `json:"entry_host"`
+	EntryPort                int               `json:"entry_port"`
+	SourceCount              int               `json:"source_count"`
+	DuplicateCount           int               `json:"duplicate_count"`
+	SourceURLs               []string          `json:"source_urls"`
+	SourceCountry            string            `json:"source_country,omitempty"`
+	SourceCity               string            `json:"source_city,omitempty"`
+	ExitIP                   string            `json:"exit_ip,omitempty"`
+	ExitCountry              string            `json:"exit_country,omitempty"`
+	EntryExitSameIP          bool              `json:"entry_exit_same_ip"`
+	SourceCountryMatchesExit string            `json:"source_country_matches_exit,omitempty"`
+	CloudflareColo           string            `json:"cloudflare_colo,omitempty"`
+	CloudflareHTTP           string            `json:"cloudflare_http,omitempty"`
+	CloudflareTLS            string            `json:"cloudflare_tls,omitempty"`
+	CloudflareSNI            string            `json:"cloudflare_sni,omitempty"`
+	CloudflareKEX            string            `json:"cloudflare_kex,omitempty"`
+	StatusCode               int               `json:"status_code"`
+	DurationMillis           int64             `json:"duration_ms"`
+	ValidatedAt              string            `json:"validated_at"`
+	ProbeURL                 string            `json:"probe_url"`
+	ValidationTimeout        string            `json:"validation_timeout"`
+	CloudflareTrace          map[string]string `json:"cloudflare_trace,omitempty"`
+}
+
 type Metadata struct {
-	StartedAt         time.Time `json:"started_at"`
-	FinishedAt        time.Time `json:"finished_at"`
-	Duration          string    `json:"duration"`
-	ProbeURL          string    `json:"probe_url"`
-	FetchProxy        string    `json:"fetch_proxy,omitempty"`
-	ValidStatuses     string    `json:"valid_statuses"`
-	FetchTimeout      string    `json:"fetch_timeout"`
-	ValidationTimeout string    `json:"validation_timeout"`
-	ValidateWorkers   int       `json:"validate_workers"`
-	Totals            Totals    `json:"totals"`
-	Outputs           Outputs   `json:"outputs"`
-	Sources           []Source  `json:"sources"`
+	StartedAt         time.Time        `json:"started_at"`
+	FinishedAt        time.Time        `json:"finished_at"`
+	Duration          string           `json:"duration"`
+	ProbeURL          string           `json:"probe_url"`
+	FetchProxy        string           `json:"fetch_proxy,omitempty"`
+	ValidStatuses     string           `json:"valid_statuses"`
+	FetchTimeout      string           `json:"fetch_timeout"`
+	ValidationTimeout string           `json:"validation_timeout"`
+	ValidateWorkers   int              `json:"validate_workers"`
+	Totals            Totals           `json:"totals"`
+	Outputs           Outputs          `json:"outputs"`
+	Sources           []Source         `json:"sources"`
+	ValidatedProxies  []ValidatedProxy `json:"validated_proxies,omitempty"`
 }
 
 func (m *Metadata) Finalize(startedAt, finishedAt time.Time) {

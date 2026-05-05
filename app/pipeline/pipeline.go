@@ -6,6 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/BlueSkyXN/SKY-Socks5/app/config"
@@ -40,6 +43,7 @@ type candidateInfo struct {
 	Host          string
 	Port          int
 	SourceURLs    []string
+	Occurrences   int
 	SourceCountry string
 	SourceCity    string
 }
@@ -154,16 +158,28 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 		return Result{}, fmt.Errorf("validate proxies: %w", err)
 	}
 	validated := make([]string, 0, len(validationResults))
-	validatedCSV := validatedCSVHeader()
+	validatedRecords := make([]report.ValidatedProxy, 0, len(validationResults))
+	finishedAt := deps.Now()
+	validatedAt := finishedAt.UTC().Format(time.RFC3339)
 	for _, validationResult := range validationResults {
 		if validationResult.Reachable {
 			validated = append(validated, validationResult.Address)
-			validatedCSV = append(validatedCSV, validatedCSVRow(validationResult, candidateIndex[validationResult.Address], cfg.ProbeURL))
+			validatedRecords = append(validatedRecords, validatedProxyRecord(
+				validationResult,
+				candidateIndex[validationResult.Address],
+				cfg.ProbeURL,
+				cfg.ValidateTimeout.String(),
+				validatedAt,
+			))
 		}
 	}
 	proxy.SortStrings(validated)
+	sort.Slice(validatedRecords, func(i, j int) bool {
+		return validatedRecords[i].ProxyAddress < validatedRecords[j].ProxyAddress
+	})
 	meta.Totals.ValidProxies = len(validated)
-	meta.Finalize(startedAt, deps.Now())
+	meta.ValidatedProxies = validatedRecords
+	meta.Finalize(startedAt, finishedAt)
 
 	if err := deps.WriteLines(cfg.RawOutputPath, raw, false); err != nil {
 		return Result{}, fmt.Errorf("write raw output: %w", err)
@@ -174,14 +190,14 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 	if err := deps.WriteLines(cfg.ValidatedOutputPath, validated, true); err != nil {
 		return Result{}, fmt.Errorf("write validated output: %w", err)
 	}
-	if err := deps.WriteCSV(cfg.ValidatedCSVPath, validatedCSV); err != nil {
+	if err := deps.WriteCSV(cfg.ValidatedCSVPath, validatedCSVRows(validatedRecords)); err != nil {
 		return Result{}, fmt.Errorf("write validated CSV output: %w", err)
 	}
 	if err := deps.WriteJSON(cfg.ReportOutputPath, meta); err != nil {
 		return Result{}, fmt.Errorf("write report output: %w", err)
 	}
 
-	return Result{Raw: raw, Unique: unique, Validated: validated, ValidatedCSV: validatedCSV, Metadata: meta}, nil
+	return Result{Raw: raw, Unique: unique, Validated: validated, ValidatedCSV: validatedCSVRows(validatedRecords), Metadata: meta}, nil
 }
 
 func DefaultDependencies() Dependencies {
@@ -234,6 +250,7 @@ func trackCandidate(index map[string]*candidateInfo, sourceURL string, candidate
 		}
 		index[candidate.Address] = info
 	}
+	info.Occurrences++
 	info.SourceURLs = appendUnique(info.SourceURLs, sourceURL)
 	if info.SourceCountry == "" {
 		info.SourceCountry = candidate.SourceCountry
@@ -255,58 +272,102 @@ func appendUnique(values []string, value string) []string {
 	return append(values, value)
 }
 
-func validatedCSVHeader() [][]string {
-	return [][]string{{
+func validatedCSVRows(records []report.ValidatedProxy) [][]string {
+	rows := [][]string{{
 		"proxy_address",
 		"entry_host",
 		"entry_port",
+		"source_count",
+		"duplicate_count",
 		"source_urls",
 		"source_country",
 		"source_city",
 		"exit_ip",
 		"exit_country",
+		"entry_exit_same_ip",
+		"source_country_matches_exit",
 		"cloudflare_colo",
 		"cloudflare_http",
 		"cloudflare_tls",
+		"cloudflare_sni",
+		"cloudflare_kex",
 		"status_code",
 		"duration_ms",
+		"validated_at",
 		"probe_url",
+		"validation_timeout",
 	}}
+	for _, record := range records {
+		rows = append(rows, validatedCSVRow(record))
+	}
+	return rows
 }
 
-func validatedCSVRow(result validate.Result, info *candidateInfo, probeURL string) []string {
-	entryHost := ""
-	entryPort := ""
-	sourceURLs := ""
-	sourceCountry := ""
-	sourceCity := ""
+func validatedProxyRecord(result validate.Result, info *candidateInfo, probeURL, validationTimeout, validatedAt string) report.ValidatedProxy {
+	record := report.ValidatedProxy{
+		ProxyAddress:      result.Address,
+		ExitIP:            result.ExitIP,
+		ExitCountry:       result.ExitCountry,
+		CloudflareColo:    result.CloudflareColo,
+		CloudflareHTTP:    result.CloudflareHTTP,
+		CloudflareTLS:     result.CloudflareTLS,
+		CloudflareSNI:     result.CloudflareSNI,
+		CloudflareKEX:     result.CloudflareKEX,
+		StatusCode:        result.StatusCode,
+		DurationMillis:    result.DurationMillis,
+		ValidatedAt:       validatedAt,
+		ProbeURL:          probeURL,
+		ValidationTimeout: validationTimeout,
+		CloudflareTrace:   result.CloudflareTrace,
+	}
 	if info != nil {
-		entryHost = info.Host
-		entryPort = fmt.Sprintf("%d", info.Port)
-		sourceURLs = joinCSVList(info.SourceURLs)
-		sourceCountry = info.SourceCountry
-		sourceCity = info.SourceCity
+		record.EntryHost = info.Host
+		record.EntryPort = info.Port
+		record.SourceURLs = append([]string(nil), info.SourceURLs...)
+		record.SourceCount = len(info.SourceURLs)
+		record.DuplicateCount = info.Occurrences
+		record.SourceCountry = info.SourceCountry
+		record.SourceCity = info.SourceCity
+		record.EntryExitSameIP = info.Host != "" && result.ExitIP != "" && strings.EqualFold(info.Host, result.ExitIP)
+		record.SourceCountryMatchesExit = compareCountry(info.SourceCountry, result.ExitCountry)
 	}
+	return record
+}
+
+func validatedCSVRow(record report.ValidatedProxy) []string {
 	return []string{
-		result.Address,
-		entryHost,
-		entryPort,
-		sourceURLs,
-		sourceCountry,
-		sourceCity,
-		result.ExitIP,
-		result.ExitCountry,
-		result.CloudflareColo,
-		result.CloudflareHTTP,
-		result.CloudflareTLS,
-		fmt.Sprintf("%d", result.StatusCode),
-		fmt.Sprintf("%d", result.DurationMillis),
-		probeURL,
+		record.ProxyAddress,
+		record.EntryHost,
+		strconv.Itoa(record.EntryPort),
+		strconv.Itoa(record.SourceCount),
+		strconv.Itoa(record.DuplicateCount),
+		join(record.SourceURLs, " | "),
+		record.SourceCountry,
+		record.SourceCity,
+		record.ExitIP,
+		record.ExitCountry,
+		strconv.FormatBool(record.EntryExitSameIP),
+		record.SourceCountryMatchesExit,
+		record.CloudflareColo,
+		record.CloudflareHTTP,
+		record.CloudflareTLS,
+		record.CloudflareSNI,
+		record.CloudflareKEX,
+		strconv.Itoa(record.StatusCode),
+		strconv.FormatInt(record.DurationMillis, 10),
+		record.ValidatedAt,
+		record.ProbeURL,
+		record.ValidationTimeout,
 	}
 }
 
-func joinCSVList(values []string) string {
-	return join(values, " | ")
+func compareCountry(sourceCountry, exitCountry string) string {
+	sourceCountry = strings.TrimSpace(sourceCountry)
+	exitCountry = strings.TrimSpace(exitCountry)
+	if sourceCountry == "" || exitCountry == "" {
+		return ""
+	}
+	return strconv.FormatBool(strings.EqualFold(sourceCountry, exitCountry))
 }
 
 func join(values []string, sep string) string {

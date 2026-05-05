@@ -43,7 +43,7 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 		},
 		Validate: func(ctx context.Context, addresses []string, opts validate.Options) ([]validate.Result, error) {
 			return []validate.Result{
-				{Address: "1.1.1.1:1080", Reachable: true, StatusCode: 200, ExitIP: "198.51.100.10", ExitCountry: "US", CloudflareColo: "SJC"},
+				{Address: "1.1.1.1:1080", Reachable: true, StatusCode: 200, ExitIP: "198.51.100.10", ExitCountry: "US", CloudflareColo: "SJC", CloudflareSNI: "plaintext", CloudflareKEX: "X25519", CloudflareTrace: map[string]string{"ip": "198.51.100.10", "loc": "US"}},
 				{Address: "2.2.2.2:1080", Reachable: false, StatusCode: 500},
 				{Address: "3.3.3.3:1080", Reachable: true, StatusCode: 200, ExitIP: "203.0.113.10", ExitCountry: "FR", CloudflareColo: "CDG"},
 			}, nil
@@ -86,8 +86,17 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 	if len(csvRows) != 3 {
 		t.Fatalf("csv rows = %#v", csvRows)
 	}
-	if csvRows[1][0] != "1.1.1.1:1080" || csvRows[1][6] != "198.51.100.10" || csvRows[1][7] != "US" {
+	if csvRows[1][0] != "1.1.1.1:1080" || csvRows[1][3] != "2" || csvRows[1][4] != "2" || csvRows[1][8] != "198.51.100.10" || csvRows[1][9] != "US" {
 		t.Fatalf("first csv data row = %#v", csvRows[1])
+	}
+	if csvRows[1][15] != "plaintext" || csvRows[1][16] != "X25519" {
+		t.Fatalf("first csv cloudflare fields = %#v", csvRows[1])
+	}
+	if len(writtenReport.ValidatedProxies) != 2 {
+		t.Fatalf("validated proxy records = %#v", writtenReport.ValidatedProxies)
+	}
+	if writtenReport.ValidatedProxies[0].CloudflareTrace["ip"] != "198.51.100.10" {
+		t.Fatalf("validated proxy trace = %#v", writtenReport.ValidatedProxies[0].CloudflareTrace)
 	}
 }
 

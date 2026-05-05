@@ -18,6 +18,7 @@ Each non-empty, non-comment line should be an HTTP or HTTPS URL that returns SOC
 - Verify a new source with a short run using a temporary source file before merging.
 - Country-scoped Proxifly files can contain mixed protocols. The CLI accepts SOCKS5 candidates and rejects `http://` or `https://` proxy records instead of testing them as SOCKS5.
 - A high upstream candidate count is not the same as a high validated count. Validation requires an end-to-end SOCKS5 connection to the probe URL within the configured timeout and an accepted HTTP status.
+- The main CSV intentionally keeps only fields useful for filtering and comparison. Full Cloudflare trace key/value data is preserved in `proxy_report.json`.
 
 ## Proxifly
 

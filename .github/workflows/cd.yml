@@ -112,7 +112,8 @@ jobs:
             echo "- 验证超时 / Validate timeout: \`${VALIDATE_TIMEOUT}\`"
             echo "- 验证并发 / Validate concurrency: \`${VALIDATE_CONCURRENCY}\`"
             echo "- 有效性口径 / Validation policy: SOCKS5 proxy must complete an HTTP GET to the probe URL and return an accepted status."
-            echo "- 出口信息 / Exit metadata: Cloudflare trace fields are parsed into \`validated_proxies.csv\` when the probe URL returns them."
+            echo "- 主 CSV 字段 / Main CSV fields: entry endpoint, source count, duplicate count, exit IP/country, Cloudflare colo/http/tls/sni/kex, status, timing, validation settings."
+            echo "- 完整 Trace / Full trace: raw Cloudflare key/value data is preserved in \`proxy_report.json\`."
           } >> "${GITHUB_STEP_SUMMARY}"
 
           if [ -f generated/proxy_report.json ]; then
