@@ -22,6 +22,6 @@ SKY-Socks5 treats Cloudflare `/cdn-cgi/trace` as an exit-observation probe, not 
 - Build creates cross-platform binary archives only.
 - CD runs live proxy validation in the GitHub Actions network environment and uploads generated result artifacts.
 - Local development should use `go test`, `go vet`, `go build`, `actionlint`, and static artifact checks. Do not use local proxy-validation results as evidence for CD quality because network conditions differ.
-- CD summaries should explain the input source mode, validation policy, output files, valid rate, exit-country distribution, Cloudflare colo distribution, source-country match rate, entry/exit IP agreement, timing percentiles, and any non-default Cloudflare flags.
+- CD summaries should explain the input source mode, validation policy, output files, valid rate, exit-country distribution, Cloudflare colo distribution, source-country match rate, entry/exit IP agreement, timing percentiles, any non-default Cloudflare flags, and per-source candidate/unique/valid counts. Per-source valid counts are restored after global deduplication, so a proxy repeated by multiple sources counts as valid for every source that listed it.
 
 Cloudflare trace does not provide ASN, ISP, city, region, or risk score. Add a separate IP enrichment layer if those fields become product requirements.

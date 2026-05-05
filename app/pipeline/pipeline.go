@@ -111,6 +111,7 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 	unique := make([]string, 0)
 	seen := make(map[string]struct{})
 	candidateIndex := make(map[string]*candidateInfo)
+	sourceCandidateSets := make(map[string]map[string]struct{})
 	for _, fetched := range fetchResults {
 		sourceMeta := report.Source{
 			URL:            fetched.URL,
@@ -130,6 +131,7 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 				meta.Totals.ParsedProxies++
 				sourceMeta.Accepted++
 				raw = append(raw, candidate.Address)
+				trackSourceCandidate(sourceCandidateSets, fetched.URL, candidate.Address)
 				trackCandidate(candidateIndex, fetched.URL, candidate)
 				if _, ok := seen[candidate.Address]; ok {
 					continue
@@ -142,6 +144,7 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 			}
 			meta.Totals.ParseErrors++
 		}
+		sourceMeta.UniqueProxies = len(sourceCandidateSets[fetched.URL])
 		meta.Sources = append(meta.Sources, sourceMeta)
 	}
 	proxy.SortStrings(raw)
@@ -159,11 +162,13 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 	}
 	validated := make([]string, 0, len(validationResults))
 	validatedRecords := make([]report.ValidatedProxy, 0, len(validationResults))
+	validatedSet := make(map[string]struct{})
 	finishedAt := deps.Now()
 	validatedAt := finishedAt.UTC().Format(time.RFC3339)
 	for _, validationResult := range validationResults {
 		if validationResult.Reachable {
 			validated = append(validated, validationResult.Address)
+			validatedSet[validationResult.Address] = struct{}{}
 			validatedRecords = append(validatedRecords, validatedProxyRecord(
 				validationResult,
 				candidateIndex[validationResult.Address],
@@ -173,6 +178,7 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 			))
 		}
 	}
+	applySourceValidationCounts(meta.Sources, sourceCandidateSets, validatedSet)
 	proxy.SortStrings(validated)
 	sort.Slice(validatedRecords, func(i, j int) bool {
 		return validatedRecords[i].ProxyAddress < validatedRecords[j].ProxyAddress
@@ -257,6 +263,28 @@ func trackCandidate(index map[string]*candidateInfo, sourceURL string, candidate
 	}
 	if info.SourceCity == "" {
 		info.SourceCity = candidate.SourceCity
+	}
+}
+
+func trackSourceCandidate(index map[string]map[string]struct{}, sourceURL, address string) {
+	if address == "" {
+		return
+	}
+	addresses, ok := index[sourceURL]
+	if !ok {
+		addresses = make(map[string]struct{})
+		index[sourceURL] = addresses
+	}
+	addresses[address] = struct{}{}
+}
+
+func applySourceValidationCounts(sources []report.Source, sourceCandidateSets map[string]map[string]struct{}, validatedSet map[string]struct{}) {
+	for sourceIndex := range sources {
+		for address := range sourceCandidateSets[sources[sourceIndex].URL] {
+			if _, ok := validatedSet[address]; ok {
+				sources[sourceIndex].ValidProxies++
+			}
+		}
 	}
 }
 

@@ -83,6 +83,15 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 	if writtenReport.Outputs.ValidatedCSVPath != cfg.ValidatedCSVPath {
 		t.Fatalf("ValidatedCSVPath = %q", writtenReport.Outputs.ValidatedCSVPath)
 	}
+	if len(writtenReport.Sources) != 2 {
+		t.Fatalf("sources = %#v", writtenReport.Sources)
+	}
+	if writtenReport.Sources[0].URL != "https://source-one.example" || writtenReport.Sources[0].UniqueProxies != 2 || writtenReport.Sources[0].ValidProxies != 1 {
+		t.Fatalf("first source stats = %#v", writtenReport.Sources[0])
+	}
+	if writtenReport.Sources[1].URL != "https://source-two.example" || writtenReport.Sources[1].UniqueProxies != 2 || writtenReport.Sources[1].ValidProxies != 2 {
+		t.Fatalf("second source stats = %#v", writtenReport.Sources[1])
+	}
 	if len(csvRows) != 3 {
 		t.Fatalf("csv rows = %#v", csvRows)
 	}

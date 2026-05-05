@@ -205,15 +205,17 @@ jobs:
           print(f"| Cloudflare flags | {md(top_items(flag_counts))} |")
 
           print()
-          print("| 数据源 / Source | 状态 / Status | 候选 / Candidates | 接受 / Accepted | 错误 / Error |")
-          print("| --- | ---: | ---: | ---: | --- |")
+          print("| 数据源 / Source | 状态 / Status | 候选 / Candidates | 接受 / Accepted | 去重 / Unique | 有效 / Valid | 有效率 / Valid rate | 错误 / Error |")
+          print("| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
           for source in report["sources"]:
               status = source.get("status_code", "")
               error = source.get("error", "")
+              unique = source.get("unique_proxies", 0)
+              valid = source.get("valid_proxies", 0)
               url = source["url"]
               if len(url) > 96:
                   url = url[:93] + "..."
-              print(f"| `{md(url)}` | {status} | {source['candidates']} | {source['accepted']} | {md(error)} |")
+              print(f"| `{md(url)}` | {status} | {source['candidates']} | {source['accepted']} | {unique} | {valid} | {percent(valid, unique)} | {md(error)} |")
           PY
           else
             {

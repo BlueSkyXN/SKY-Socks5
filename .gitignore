@@ -171,6 +171,9 @@ unique_proxies.txt
 validated_proxies.txt
 proxy_report.json
 
+# Local investigation notes and downloaded source samples.
+local/
+
 # Legacy Python artifacts
 socks5_unique.txt
 socks5_working.txt

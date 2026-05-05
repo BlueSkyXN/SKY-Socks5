@@ -10,6 +10,8 @@ type Source struct {
 	StatusCode     int    `json:"status_code,omitempty"`
 	Candidates     int    `json:"candidates"`
 	Accepted       int    `json:"accepted"`
+	UniqueProxies  int    `json:"unique_proxies"`
+	ValidProxies   int    `json:"valid_proxies"`
 	Error          string `json:"error,omitempty"`
 	DurationMillis int64  `json:"duration_ms"`
 }
