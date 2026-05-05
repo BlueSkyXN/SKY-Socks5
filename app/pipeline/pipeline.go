@@ -123,6 +123,9 @@ func Run(ctx context.Context, cfg config.Config, deps Dependencies) (Result, err
 			meta.Totals.FetchErrors++
 		}
 		for _, line := range fetched.Lines {
+			if proxy.IsSkippableLine(line) {
+				continue
+			}
 			candidates, errs := proxy.ExtractCandidates(line)
 			sourceMeta.Candidates += len(candidates) + len(errs)
 			meta.Totals.RawCandidates += len(candidates) + len(errs)

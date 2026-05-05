@@ -60,6 +60,9 @@ func Normalize(raw string) (string, error) {
 }
 
 func ExtractCandidates(raw string) ([]Candidate, []error) {
+	if IsSkippableLine(raw) {
+		return nil, nil
+	}
 	fields := candidateFields(raw)
 	if len(fields) == 0 {
 		return nil, []error{errors.New("proxy line is empty")}
@@ -131,11 +134,18 @@ func firstToken(raw string) string {
 }
 
 func candidateFields(raw string) []string {
-	trimmed := strings.TrimSpace(strings.TrimPrefix(raw, "\uFEFF"))
-	if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+	if IsSkippableLine(raw) {
 		return nil
 	}
+	trimmed := strings.TrimSpace(strings.TrimPrefix(raw, "\uFEFF"))
 	return strings.Fields(trimmed)
+}
+
+// IsSkippableLine reports whether a fetched source line is structural text,
+// not a proxy candidate.
+func IsSkippableLine(raw string) bool {
+	trimmed := strings.TrimSpace(strings.TrimPrefix(raw, "\uFEFF"))
+	return trimmed == "" || strings.HasPrefix(trimmed, "#")
 }
 
 func splitCandidateMetadata(raw string) (token string, sourceCountry string, sourceCity string) {

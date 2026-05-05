@@ -50,3 +50,10 @@ func TestExtractCandidatesHandlesWhitespaceAndCSVMetadata(t *testing.T) {
 		t.Fatalf("second candidate = %#v", got[1])
 	}
 }
+
+func TestExtractCandidatesSkipsComments(t *testing.T) {
+	got, errs := ExtractCandidates("# Updated Proxies: 2026-05-05 13:06 UTC")
+	if len(got) != 0 || len(errs) != 0 {
+		t.Fatalf("ExtractCandidates() = %#v, errors = %#v", got, errs)
+	}
+}

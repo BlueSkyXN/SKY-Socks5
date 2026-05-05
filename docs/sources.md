@@ -10,16 +10,35 @@ Each non-empty, non-comment line should be an HTTP or HTTPS URL that returns SOC
 - `socks5://host:port,FR,Paris`
 - `[ipv6-address]:port`
 
+Blank lines and full-line `#` comments in fetched source responses are treated as structural text and skipped before candidate parsing.
+
 ## Current source policy
 
 - Prefer SOCKS5-specific endpoints over mixed protocol lists.
 - Prefer text endpoints over JSON. CSV-like records are accepted when the first field is the proxy URL and following fields provide source metadata such as country or city.
 - Keep source additions small and reviewable.
-- Verify a new source with a short run using a temporary source file before merging.
+- Before merging a default source addition, locally check only source fetchability, returned format, and parser compatibility. Do not use local SOCKS5 reachability as CD evidence; live proxy validation belongs in the CD workflow's network environment.
 - Country-scoped Proxifly files can contain mixed protocols. The CLI accepts SOCKS5 candidates and rejects `http://` or `https://` proxy records instead of testing them as SOCKS5.
 - Remove sources that consistently return HTTP errors such as `404 Not Found` or `502 Bad Gateway`; they should not stay in the default aggregate list.
+- Avoid adding very large or mixed-protocol feeds to the default aggregate list until per-source CD results show useful unique and valid contribution.
 - A high upstream candidate count is not the same as a high validated count. Validation requires an end-to-end SOCKS5 connection to the probe URL within the configured timeout and an accepted HTTP status.
 - The main CSV intentionally keeps only fields useful for filtering and comparison. Full Cloudflare trace key/value data is preserved in `proxy_report.json`; see `docs/result-fields.md` for the field policy.
+
+## May 2026 source review additions
+
+The default list includes these smaller raw text sources from the May 2026 source review because they currently fetch successfully and return parser-compatible SOCKS5 candidate lines:
+
+```text
+https://raw.githubusercontent.com/ClearProxy/checked-proxy-list/main/socks5/raw/all.txt
+https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-socks5.txt
+https://raw.githubusercontent.com/Thordata/awesome-free-proxy-list/main/proxies/socks5.txt
+https://raw.githubusercontent.com/Sage520/Proxy-List/main/socks5.txt
+https://raw.githubusercontent.com/proxygenerator1/ProxyGenerator/main/Stable/socks5.txt
+https://raw.githubusercontent.com/proxygenerator1/ProxyGenerator/main/MostStable/socks5.txt
+https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/socks5.txt
+```
+
+Larger compatible feeds such as `r00tee/Proxy-List`, `dpangestuw/Free-Proxy`, `iplocate/free-proxy-list`, `vmheaven/VMHeaven.io-Free-Proxy-List`, and `SoliSpirit/proxy-list` are intentionally not enabled by default yet. They should be compared through CD per-source `unique_proxies` and `valid_proxies` results before becoming part of the default aggregate list. `monosans/proxy-list` is also kept out until its raw endpoint consistently returns a non-empty list. Meta-source URL lists, such as `gfpcom/free-proxy-list` `sources/socks5.txt`, need nested-source support before they can be used directly.
 
 ## ProxyScrape
 

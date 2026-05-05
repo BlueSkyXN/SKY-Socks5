@@ -94,6 +94,8 @@ go run . \
 - **Build** compiles Linux, macOS, and Windows archives and uploads them as workflow artifacts. It does not publish GitHub Releases.
 - **CD** runs the proxy validation flow inside GitHub Actions and uploads result artifacts. By default it uses every URL in `configs/sources.txt`; the optional `source_url` input is only for a one-source smoke run. Its bilingual job summary reports the validation inputs, totals, output line counts, exit country and Cloudflare colo distributions, country-match checks, timing percentiles, per-source candidate/unique/valid counts, and artifact fields.
 
+Local source audits should stop at fetchability, response format, and parser compatibility. Do not treat local SOCKS5 reachability checks as evidence for CD quality; the live proxy test is intentionally run in GitHub Actions.
+
 See `docs/result-fields.md` for the result-field policy.
 
 ## Governance

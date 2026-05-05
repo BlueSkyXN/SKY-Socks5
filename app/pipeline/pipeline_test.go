@@ -37,7 +37,7 @@ func TestRunWritesExpectedArtifacts(t *testing.T) {
 		},
 		FetchAll: func(ctx context.Context, urls []string, opts fetch.Options) []fetch.Result {
 			return []fetch.Result{
-				{URL: urls[0], StatusCode: 200, Lines: []string{"2.2.2.2:1080", "1.1.1.1:1080", "bad"}},
+				{URL: urls[0], StatusCode: 200, Lines: []string{"# source header", "2.2.2.2:1080", "1.1.1.1:1080", "bad"}},
 				{URL: urls[1], StatusCode: 200, Lines: []string{"1.1.1.1:1080", "3.3.3.3:1080"}},
 			}
 		},
